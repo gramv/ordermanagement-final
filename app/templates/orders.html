@@ -1,0 +1,28 @@
+<!-- app/templates/orders.html -->
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Daily Orders</h1>
+    {% for order in daily_orders %}
+        <h2>{{ order.wholesaler.name }} - {{ order.date }}</h2>
+        <ul>
+            {% for item in order.items %}
+                <li>{{ item.product.name }} - Quantity: {{ item.quantity }} - Price: ${{ "%.2f"|format(item.price) }}</li>
+            {% endfor %}
+        </ul>
+        <p>Total: ${{ "%.2f"|format(order.total_amount) }}</p>
+        <a href="{{ url_for('main.order_detail', order_id=order.id) }}" class="btn btn-primary">Edit Order</a>
+    {% endfor %}
+
+    <h1>Monthly Orders</h1>
+    {% for order in monthly_orders %}
+        <h2>{{ order.wholesaler.name }} - {{ order.date }}</h2>
+        <ul>
+            {% for item in order.items %}
+                <li>{{ item.product.name }} - Quantity: {{ item.quantity }} - Price: ${{ "%.2f"|format(item.price) }}</li>
+            {% endfor %}
+        </ul>
+        <p>Total: ${{ "%.2f"|format(order.total_amount) }}</p>
+        <a href="{{ url_for('main.order_detail', order_id=order.id) }}" class="btn btn-primary">Edit Order</a>
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,45 @@
+<!-- app/templates/order_detail.html -->
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Order for {{ order.wholesaler.name }} - {{ order.date }}</h1>
+    <form id="add-item-form">
+        <select name="product_id" required>
+            {% for product in order.wholesaler.products %}
+                <option value="{{ product.id }}">{{ product.name }} - ${{ "%.2f"|format(product.price) }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="quantity" value="1" min="1" required>
+        <button type="submit">Add Item</button>
+    </form>
+    <ul id="order-items">
+        {% for item in order.items %}
+            <li>{{ item.product.name }} - Quantity: {{ item.quantity }} - Price: ${{ "%.2f"|format(item.price) }}</li>
+        {% endfor %}
+    </ul>
+    <p>Total: $<span id="total-amount">{{ "%.2f"|format(order.total_amount) }}</span></p>
+    {% if order.status == 'pending' %}
+        <form action="{{ url_for('main.finalize_order', order_id=order.id) }}" method="post">
+            <button type="submit" class="btn btn-success">Finalize Order</button>
+        </form>
+    {% else %}
+        <p>This order has been finalized.</p>
+    {% endif %}
+
+    <script>
+        document.getElementById('add-item-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('{{ url_for("main.add_order_item", order_id=order.id) }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Order Management System{% endblock %}
+
+{% block content %}
+    <h1>Welcome to the Order Management System</h1>
+    <p>Use the navigation menu to manage products, wholesalers, create orders, view pending orders, or check order history.</p>
+    
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <h2>Quick Links</h2>
+            <ul>
+                <li><a href="{{ url_for('main.products') }}">Manage Products</a></li>
+                <li><a href="{{ url_for('main.list_wholesalers') }}">Manage Wholesalers</a></li>
+                <li><a href="{{ url_for('main.create_order_list') }}">Create New Order</a></li>
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h2>Pending Orders</h2>
+            <ul>
+                <li><a href="{{ url_for('main.daily_orders') }}">View Daily Orders</a></li>
+                <li><a href="{{ url_for('main.monthly_orders') }}">View Monthly Orders</a></li>
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h2>Order History</h2>
+            <p><a href="{{ url_for('main.order_history') }}">View Order History</a></p>
+        </div>
+    </div>
+{% endblock %}

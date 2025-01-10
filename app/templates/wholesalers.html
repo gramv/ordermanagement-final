@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Wholesalers</h1>
+    <a href="{{ url_for('main.add_wholesaler') }}" class="btn btn-primary mb-3">Add New Wholesaler</a>
+    {% if wholesalers %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Contact Person</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wholesaler in wholesalers %}
+                    <tr>
+                        <td>{{ wholesaler.name }}</td>
+                        <td>{{ 'Daily' if wholesaler.is_daily else 'Monthly' }}</td>
+                        <td>{{ wholesaler.contact_person }}</td>
+                        <td>{{ wholesaler.email }}</td>
+                        <td>{{ wholesaler.phone }}</td>
+                        <td>
+                            <a href="{{ url_for('main.edit_wholesaler', id=wholesaler.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                            <form action="{{ url_for('main.delete_wholesaler', id=wholesaler.id) }}" method="post" style="display: inline;">
+                                <input type="submit" value="Delete" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this wholesaler?');">
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No wholesalers found.</p>
+    {% endif %}
+{% endblock %}

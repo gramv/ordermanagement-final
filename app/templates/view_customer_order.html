@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Customer Order #{{ order.id }}</h1>
+    <p><strong>Customer:</strong> {{ order.customer_name }}</p>
+    <p><strong>Contact:</strong> {{ order.customer_contact }}</p>
+    <p><strong>Status:</strong> {{ order.status }}</p>
+    <p><strong>Paid:</strong> {% if order.is_paid %}Yes{% else %}No{% endif %}</p>
+    <p><strong>Total Amount:</strong> ${{ "%.2f"|format(order.total_amount) }}</p>
+    
+    <h2>Order Items</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items %}
+                <tr>
+                    <td>{{ item.product.name if item.product else item.custom_product_name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>${{ "%.2f"|format(item.price) }}</td>
+                    <td>{{ item.status }}</td>
+                    <td>
+                        <a href="{{ url_for('main.edit_customer_order_item', item_id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                        <form action="{{ url_for('main.delete_customer_order_item', item_id=item.id) }}" method="post" style="display: inline;">
+                            <input type="submit" value="Delete" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?');">
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <a href="{{ url_for('main.add_customer_order_item', order_id=order.id) }}" class="btn btn-success">Add Item</a>
+    <a href="{{ url_for('main.edit_customer_order', order_id=order.id) }}" class="btn btn-primary">Edit Order</a>
+    <form action="{{ url_for('main.delete_customer_order', order_id=order.id) }}" method="post" style="display: inline;">
+        <input type="submit" value="Delete Order" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this order?');">
+    </form>
+    <a href="{{ url_for('main.customer_orders') }}" class="btn btn-secondary">Back to Orders List</a>
+{% endblock %}

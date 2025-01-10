@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Welcome to the Order Management System</h1>
+    {% if current_user.is_authenticated %}
+        <p>Hello, {{ current_user.username }}!</p>
+        <div class="row mt-4">
+            <div class="col-md-3 mb-3">
+                <a href="{{ url_for('main.products') }}" class="btn btn-primary btn-block">View Products</a>
+            </div>
+            <div class="col-md-3 mb-3">
+                <a href="{{ url_for('main.list_wholesalers') }}" class="btn btn-info btn-block">Manage Wholesalers</a>
+            </div>
+            <div class="col-md-3 mb-3">
+                <a href="{{ url_for('main.create_order_list') }}" class="btn btn-success btn-block">Create Order</a>
+            </div>
+        </div>
+    {% else %}
+        <p>Please log in to access the system.</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Log In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-secondary">Register</a>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Date Range Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label">Date Range</label>
+                </div>
+                <div class="col-auto">
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ start_date }}">
+                </div>
+                <div class="col-auto">
+                    <span class="form-text">to</span>
+                </div>
+                <div class="col-auto">
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ end_date }}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-outline-secondary" data-period="today">Today</button>
+                    <button type="button" class="btn btn-outline-secondary" data-period="week">This Week</button>
+                    <button type="button" class="btn btn-outline-secondary" data-period="month">This Month</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards Row -->
+    <div class="row g-4 mb-4">
+        <!-- Total Sales Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Total Sales</div>
+                            <div class="h3 mb-0">${{ "%.2f"|format(summary.total_sales) }}</div>
+                            <div class="small mt-2">
+                                Avg: ${{ "%.2f"|format(summary.avg_daily_sales) }}/day
+                            </div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-dollar-sign fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Count -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Transactions</div>
+                            <div class="h3 mb-0">{{ summary.transaction_count }}</div>
+                            <div class="small mt-2">
+                                Avg: ${{ "%.2f"|format(summary.total_sales / summary.transaction_count if summary.transaction_count else 0) }}/transaction
+                            </div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-shopping-cart fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Payment Methods</div>
+                            <div class="small mt-2">
+                                Cash: ${{ "%.2f"|format(summary.payment_methods.cash) }}<br>
+                                Card: ${{ "%.2f"|format(summary.payment_methods.card) }}<br>
+                                OTC: ${{ "%.2f"|format(summary.payment_methods.otc) }}
+                            </div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-credit-card fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discrepancies -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card {{ 'bg-danger' if summary.total_discrepancy < -10 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Net Discrepancy</div>
+                            <div class="h3 mb-0">${{ "%.2f"|format(summary.total_discrepancy) }}</div>
+                            <div class="small mt-2">{{ "%.1f"|format(summary.total_discrepancy / summary.total_sales * 100 if summary.total_sales else 0) }}% of sales</div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <!-- Day of Week Analysis -->
+        <div class="col-xl-6">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Sales by Day of Week</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="weekdayChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Analysis -->
+        <div class="col-xl-6">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Monthly Pattern</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize charts
+    initializeCharts();
+    
+    // Setup event listeners
+    setupEventListeners();
+});
+
+function initializeCharts() {
+    // Weekday Chart
+    const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
+    new Chart(weekdayCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ weekday_data.labels|tojson }},
+            datasets: [{
+                label: 'Sales',
+                data: {{ weekday_data.sales|tojson }},
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Transactions',
+                data: {{ weekday_data.transactions|tojson }},
+                type: 'line',
+                borderColor: 'rgb(54, 162, 235)',
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Sales ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Transactions'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Monthly Chart
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ monthly_data.labels|tojson }},
+            datasets: [{
+                label: 'Total Sales',
+                data: {{ monthly_data.sales|tojson }},
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Average Daily Sales',
+                data: {{ monthly_data.avg_sales|tojson }},
+                type: 'line',
+                borderColor: 'rgb(255, 99, 132)',
+                yAxisID: 'y'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function setupEventListeners() {
+    // Date range buttons
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', function() {
+            const period = this.dataset.period;
+            setPeriod(period);
+            document.querySelector('form').submit();
+        });
+    });
+}
+
+function setPeriod(period) {
+    const today = new Date();
+    let startDate = new Date(today);
+    
+    switch(period) {
+        case 'today':
+            startDate = today;
+            break;
+        case 'week':
+            startDate.setDate(today.getDate() - 7);
+            break;
+        case 'month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            break;
+    }
+    
+    document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end_date').value = today.toISOString().split('T')[0];
+}
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div id="alert-container"></div>  <!-- For showing alerts -->
+    <form id="orderForm">
+        <div class="form-group">
+            <label for="product-search">Product</label>
+            <input type="text" class="form-control" id="product-search" autocomplete="off">
+            <input type="hidden" id="product-id" name="product_id">
+            <div id="search-results" class="list-group mt-2"></div>
+        </div>
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" min="1" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Add to Order</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Store the selected product's wholesaler type
+    let selectedProductIsDaily = false;
+
+    // Product search functionality
+    $('#product-search').on('input', function() {
+        var query = $(this).val();
+        if (query.length >= 2) {
+            $.get('/search_products', { query: query })
+                .done(function(data) {
+                    var results = $('#search-results');
+                    results.empty();
+                    data.forEach(function(product) {
+                        results.append(
+                            `<div class="list-group-item search-item" 
+                                  data-id="${product.id}"
+                                  data-wholesaler-id="${product.wholesaler_id}">
+                                ${product.name} ${product.size ? `- ${product.size}` : ''}
+                                <small class="text-muted">(${product.wholesaler_name})</small>
+                            </div>`
+                        );
+                    });
+                    results.show();
+                });
+        } else {
+            $('#search-results').hide();
+        }
+    });
+
+    // Product selection
+    $(document).on('click', '.search-item', function() {
+        var productId = $(this).data('id');
+        var wholesalerId = $(this).data('wholesaler-id');
+        var displayText = $(this).text();
+
+        $('#product-id').val(productId);
+        $('#product-search').val(displayText);
+        $('#search-results').hide();
+    });
+
+    // Form submission
+    $('#orderForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var productId = $('#product-id').val();
+        var quantity = $('#quantity').val();
+        
+        if (!productId || !quantity) {
+            showAlert('Please select a product and enter quantity', 'danger');
+            return;
+        }
+
+        $.ajax({
+            url: '/add_to_order_list',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                product_id: productId,
+                quantity: quantity
+            }),
+            success: function(response) {
+                if (response.status === 'exists') {
+                    if (confirm(response.message)) {
+                        submitOrder(productId, quantity, true);
+                    }
+                } else if (response.success) {
+                    showAlert(response.message, 'success');
+                    clearForm();
+                } else {
+                    showAlert(response.message, 'danger');
+                }
+            },
+            error: function() {
+                showAlert('An error occurred while processing your request', 'danger');
+            }
+        });
+    });
+
+    function submitOrder(productId, quantity, updateQuantity) {
+        $.ajax({
+            url: '/add_to_order_list',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                product_id: productId,
+                quantity: quantity,
+                order_type: 'daily',
+                update_quantity: updateQuantity
+            }),
+            success: function(response) {
+                if (response.success) {
+                    showAlert(response.message, 'success');
+                    clearForm();
+                } else {
+                    showAlert(response.message, 'danger');
+                }
+            },
+            error: function() {
+                showAlert('An error occurred while processing your request', 'danger');
+            }
+        });
+    }
+
+    function clearForm() {
+        $('#product-search').val('');
+        $('#product-id').val('');
+        $('#quantity').val('');
+        $('#search-results').hide();
+    }
+
+    function showAlert(message, type) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        $('#alert-container').html(alertHtml);
+        
+        // Auto-dismiss after 3 seconds
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    #search-results {
+        position: absolute;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: none;
+    }
+
+    .search-item {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+
+    .search-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

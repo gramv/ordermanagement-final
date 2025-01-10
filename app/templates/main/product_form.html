@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Manual Entry Form Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Manual Product Entry</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" enctype="multipart/form-data" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Product Basic Info -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                {{ form.product_id.label(class="form-label") }}
+                                {{ form.product_id(class="form-control") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.size.label(class="form-label") }}
+                                {{ form.size(class="form-control") }}
+                            </div>
+                        </div>
+
+                        <!-- Pricing -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                {{ form.cost_price.label(class="form-label") }}
+                                {{ form.cost_price(class="form-control", onchange="calculateMargin()") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.selling_price.label(class="form-label") }}
+                                {{ form.selling_price(class="form-control", onchange="calculateMargin()") }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Margin</label>
+                                <div id="margin-display" class="form-control bg-light">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Category & Wholesaler -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.category.label(class="form-label") }}
+                                {{ form.category(class="form-select") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.wholesaler.label(class="form-label") }}
+                                {{ form.wholesaler(class="form-select") }}
+                            </div>
+                        </div>
+
+                        <!-- Availability -->
+                        <div class="form-check mb-3">
+                            {{ form.available_in_store(class="form-check-input") }}
+                            {{ form.available_in_store.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk Upload Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Bulk Upload Products</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.bulk_file(class="form-control") }}
+                        </div>
+                        <button type="submit" name="bulk_upload" value="1" class="btn btn-primary">
+                            Upload Products
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calculateMargin() {
+    const costPrice = parseFloat(document.getElementById('cost_price').value) || 0;
+    const sellingPrice = parseFloat(document.getElementById('selling_price').value) || 0;
+    const marginDisplay = document.getElementById('margin-display');
+    
+    if (costPrice > 0 && sellingPrice > 0) {
+        const margin = ((sellingPrice - costPrice) / costPrice) * 100;
+        marginDisplay.textContent = margin.toFixed(2) + '%';
+        
+        if (margin < 0) {
+            marginDisplay.className = 'form-control bg-light text-danger';
+        } else if (margin < 15) {
+            marginDisplay.className = 'form-control bg-light text-warning';
+        } else {
+            marginDisplay.className = 'form-control bg-light text-success';
+        }
+    } else {
+        marginDisplay.textContent = '-';
+        marginDisplay.className = 'form-control bg-light';
+    }
+}
+</script>
+{% endblock %}

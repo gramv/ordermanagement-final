@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Sales Record Details</h2>
+        <a href="{{ url_for('main.list_sales') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+
+    <!-- Summary Cards Row -->
+    <div class="row g-4 mb-4">
+        <!-- Date & Time Card -->
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Date & Time</h6>
+                    <p class="mb-1"><i class="fas fa-calendar me-2"></i>{{ sales.date.strftime('%Y-%m-%d') }}</p>
+                    <p class="mb-0"><i class="fas fa-clock me-2"></i>{{ sales.report_time.strftime('%H:%M') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Card -->
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Employee</h6>
+                    <p class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        {{ sales.employee.username }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Card -->
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Status</h6>
+                    <span class="badge {{ 'bg-danger' if sales.overall_discrepancy < 0 else 'bg-success' }} p-2">
+                        {% if sales.overall_discrepancy < 0 %}
+                            <i class="fas fa-exclamation-triangle me-1"></i>Missing Amount
+                        {% else %}
+                            <i class="fas fa-check-circle me-1"></i>Extra Amount
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Difference Card -->
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total Difference</h6>
+                    <h4 class="mb-0 {{ 'text-danger' if sales.overall_discrepancy < 0 else 'text-success' }}">
+                        ${{ "%.2f"|format(sales.overall_discrepancy) }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Totals Summary Row -->
+    <div class="row g-4 mb-4">
+        <!-- Expected Total -->
+        <div class="col-md-6">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 opacity-75">Total Expected</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(sales.total_expected) }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actual Total -->
+        <div class="col-md-6">
+            <div class="card {{ 'bg-danger' if sales.overall_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 opacity-75">Total Actual</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(sales.total_actual) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Amount Details -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Amount Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Register Readings -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Register Readings</h6>
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Front Register</span>
+                                    <strong>${{ "%.2f"|format(sales.front_register_amount) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Back Register</span>
+                                    <strong>${{ "%.2f"|format(sales.back_register_amount) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Credit Card</span>
+                                    <strong>${{ "%.2f"|format(sales.credit_card_amount) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>OTC 1</span>
+                                    <strong>${{ "%.2f"|format(sales.otc1_amount) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>OTC 2</span>
+                                    <strong>${{ "%.2f"|format(sales.otc2_amount) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                    <span class="fw-bold">Total Expected</span>
+                                    <strong class="text-primary">${{ "%.2f"|format(sales.total_expected) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actual Collections -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Actual Collections</h6>
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Front Cash</span>
+                                    <strong>${{ "%.2f"|format(sales.front_register_cash) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Back Cash</span>
+                                    <strong>${{ "%.2f"|format(sales.back_register_cash) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Credit Card</span>
+                                    <strong>${{ "%.2f"|format(sales.credit_card_total) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>OTC 1</span>
+                                    <strong>${{ "%.2f"|format(sales.otc1_total) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>OTC 2</span>
+                                    <strong>${{ "%.2f"|format(sales.otc2_total) }}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                    <span class="fw-bold">Total Actual</span>
+                                    <strong class="text-success">${{ "%.2f"|format(sales.total_actual) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discrepancy Cards -->
+    <div class="row g-4">
+        <!-- Front Register Discrepancy -->
+        {% if sales.front_register_discrepancy != 0 %}
+        <div class="col-md-4">
+            <div class="card {{ 'bg-danger' if sales.front_register_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Front Register Discrepancy</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(sales.front_register_discrepancy) }}</h3>
+                    <small>{{ "Missing Amount" if sales.front_register_discrepancy < 0 else "Extra Amount" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Back Register Discrepancy -->
+        {% if sales.back_register_discrepancy != 0 %}
+        <div class="col-md-4">
+            <div class="card {{ 'bg-danger' if sales.back_register_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Back Register Discrepancy</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(sales.back_register_discrepancy) }}</h3>
+                    <small>{{ "Missing Amount" if sales.back_register_discrepancy < 0 else "Extra Amount" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Credit Card Discrepancy -->
+        {% set credit_card_discrepancy = sales.credit_card_total - sales.credit_card_amount %}
+        {% if credit_card_discrepancy != 0 %}
+        <div class="col-md-4">
+            <div class="card {{ 'bg-danger' if credit_card_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Credit Card Discrepancy</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(credit_card_discrepancy) }}</h3>
+                    <small>{{ "Missing Amount" if credit_card_discrepancy < 0 else "Extra Amount" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- OTC 1 Discrepancy -->
+        {% set otc1_discrepancy = sales.otc1_total - sales.otc1_amount %}
+        {% if otc1_discrepancy != 0 %}
+        <div class="col-md-4">
+            <div class="card {{ 'bg-danger' if otc1_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">OTC 1 Discrepancy</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(otc1_discrepancy) }}</h3>
+                    <small>{{ "Missing Amount" if otc1_discrepancy < 0 else "Extra Amount" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- OTC 2 Discrepancy -->
+        {% set otc2_discrepancy = sales.otc2_total - sales.otc2_amount %}
+        {% if otc2_discrepancy != 0 %}
+        <div class="col-md-4">
+            <div class="card {{ 'bg-danger' if otc2_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">OTC 2 Discrepancy</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(otc2_discrepancy) }}</h3>
+                    <small>{{ "Missing Amount" if otc2_discrepancy < 0 else "Extra Amount" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Total Discrepancy (always show) -->
+        <div class="col-md-4">
+            <div class="card {{ 'bg-danger' if sales.overall_discrepancy < 0 else 'bg-success' }} text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Total Discrepancy</h6>
+                    <h3 class="card-title mb-0">${{ "%.2f"|format(sales.overall_discrepancy) }}</h3>
+                    <small>{{ "Missing Amount" if sales.overall_discrepancy < 0 else "Extra Amount" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Section (if exists) -->
+    {% if sales.notes %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Notes</h5>
+                </div>
+                <div class="card-body">
+                    {{ sales.notes|replace('\n', '<br>')|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    margin-bottom: 1rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.list-group-item {
+    padding: 0.75rem 1.25rem;
+}
+
+.bg-danger, .bg-success {
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-danger::after, .bg-success::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+}
+</style>
+{% endblock %}

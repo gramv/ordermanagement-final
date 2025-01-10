@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Order Lists</h1>
+    
+    <h2>Daily Order Lists</h2>
+    {% for order_list in daily_order_lists %}
+        <div>
+            <h3>{{ order_list.wholesaler.name }} - {{ order_list.date }}</h3>
+            <ul>
+            {% for item in order_list.items %}
+                <li>{{ item.product.name }} - Quantity: {{ item.quantity }}
+                    {% if item.comment %}
+                        <br>Comment: {{ item.comment }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+
+    <h2>Monthly Order Lists</h2>
+    {% for order_list in monthly_order_lists %}
+        <div>
+            <h3>{{ order_list.wholesaler.name }} - {{ order_list.date }}</h3>
+            <ul>
+            {% for item in order_list.items %}
+                <li>{{ item.product.name }} - Quantity: {{ item.quantity }}
+                    {% if item.comment %}
+                        <br>Comment: {{ item.comment }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+{% endblock %}

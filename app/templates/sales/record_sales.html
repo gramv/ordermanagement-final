@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ title }}</h1>
+    
+    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {{ form.hidden_tag() }}
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">Register Readings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.front_register_amount.label(class="form-label") }}
+                        {{ form.front_register_amount(class="form-control") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.back_register_amount.label(class="form-label") }}
+                        {{ form.back_register_amount(class="form-control") }}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.credit_card_amount.label(class="form-label") }}
+                        {{ form.credit_card_amount(class="form-control") }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.otc1_amount.label(class="form-label") }}
+                        {{ form.otc1_amount(class="form-control") }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.otc2_amount.label(class="form-label") }}
+                        {{ form.otc2_amount(class="form-control") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">Actual Collections</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.front_register_cash.label(class="form-label") }}
+                        {{ form.front_register_cash(class="form-control") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.back_register_cash.label(class="form-label") }}
+                        {{ form.back_register_cash(class="form-control") }}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.credit_card_total.label(class="form-label") }}
+                        {{ form.credit_card_total(class="form-control") }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.otc1_total.label(class="form-label") }}
+                        {{ form.otc1_total(class="form-control") }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.otc2_total.label(class="form-label") }}
+                        {{ form.otc2_total(class="form-control") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">Upload Documents</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.register_reports.label(class="form-label") }}
+                        {{ form.register_reports(class="form-control") }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.credit_card_statement.label(class="form-label") }}
+                        {{ form.credit_card_statement(class="form-control") }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.otc_statements.label(class="form-label") }}
+                        {{ form.otc_statements(class="form-control") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            {{ form.notes.label(class="form-label") }}
+            {{ form.notes(class="form-control", rows="3") }}
+        </div>
+
+        <div class="mb-3">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Welcome, {{ current_user.username }}</h3>
+            <div class="text-muted">{{ datetime.now().strftime('%B %d, %Y') }}</div>
+        </div>
+    </div>
+
+    <!-- Primary Tasks Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Daily Sales Card -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ url_for('main.record_daily_sales') }}" class="text-decoration-none">
+                <div class="card bg-primary h-100 hover-shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Record Sales</div>
+                                <div class="text-white h5 mb-0">Daily Sales Entry</div>
+                                <div class="text-white-75 small mt-1">Morning priority task</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-cash-register fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Daily Orders Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="dropdown w-100">
+                <div class="card bg-warning h-100 hover-shadow" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Today's Orders</div>
+                                <div class="text-white h5 mb-0">{{ today_orders|length }} Orders</div>
+                                <div class="text-white-75 small mt-1">Need attention</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-shopping-cart fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('main.daily_orders') }}">View Daily Orders</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('main.create_order_list') }}">Create New Order</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Customer Orders Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="dropdown w-100">
+                <div class="card bg-success h-100 hover-shadow" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Customer Orders</div>
+                                <div class="text-white h5 mb-0">{{ recent_customer_orders|length }} Recent</div>
+                                <div class="text-white-75 small mt-1">Need processing</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-users fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('main.customer_orders') }}">View Orders</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('main.create_customer_order') }}">Create New Order</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Products Card -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ url_for('main.products') }}" class="text-decoration-none">
+                <div class="card bg-info h-100 hover-shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Products</div>
+                                <div class="text-white h5 mb-0">Inventory</div>
+                                <div class="text-white-75 small mt-1">View & manage</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-box fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('main.record_daily_sales') }}" class="btn btn-primary">
+                    <i class="fas fa-cash-register me-2"></i>Record Sales
+                </a>
+                <a href="{{ url_for('main.create_order_list') }}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Create Order
+                </a>
+                <a href="{{ url_for('main.customer_orders') }}" class="btn btn-info">
+                    <i class="fas fa-shopping-cart me-2"></i>Customer Orders
+                </a>
+                <a href="{{ url_for('main.products') }}" class="btn btn-secondary">
+                    <i class="fas fa-box me-2"></i>View Products
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Today's Orders Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Today's Orders</h5>
+                    <a href="{{ url_for('main.daily_orders') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if today_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in today_orders %}
+                            <a href="{{ url_for('main.view_order', order_id=order.id) }}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ order.wholesaler.name }}</h6>
+                                        <small class="text-muted">{{ order.items|length }} items</small>
+                                    </div>
+                                    <span class="badge bg-{{ 'success' if order.status == 'finalized' else 'warning' }}">
+                                        {{ order.status|title }}
+                                    </span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <div class="text-muted mb-3">No orders for today</div>
+                            <a href="{{ url_for('main.create_order_list') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Order
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Customer Orders Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Customer Orders</h5>
+                    <a href="{{ url_for('main.customer_orders') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_customer_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in recent_customer_orders %}
+                            <a href="{{ url_for('main.view_customer_order', order_id=order.id) }}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ order.customer_name }}</h6>
+                                        <small class="text-muted">{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-{{ 'success' if order.status == 'complete' else 'warning' }}">
+                                            {{ order.status|title }}
+                                        </span>
+                                        {% if order.is_paid %}
+                                            <span class="badge bg-success ms-1">Paid</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <div class="text-muted mb-3">No recent customer orders</div>
+                            <a href="{{ url_for('main.create_customer_order') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>New Customer Order
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Tasks Section -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Daily Tasks</h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group">
+                <!-- Record Daily Sales Task -->
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Record Daily Sales</h6>
+                            <small class="text-muted">Morning priority task</small>
+                        </div>
+                        <a href="{{ url_for('main.record_daily_sales') }}" 
+                           class="btn btn-sm btn-primary">Record</a>
+                    </div>
+                </div>
+
+                <!-- Check Daily Orders Task -->
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Check Daily Orders</h6>
+                            <small class="text-muted">Review and process daily orders</small>
+                        </div>
+                        <a href="{{ url_for('main.daily_orders') }}" 
+                           class="btn btn-sm btn-info">View</a>
+                    </div>
+                </div>
+
+                <!-- Process Customer Orders Task -->
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Customer Orders</h6>
+                            <small class="text-muted">Process pending customer orders</small>
+                        </div>
+                        <a href="{{ url_for('main.customer_orders') }}" 
+                           class="btn btn-sm btn-success">Process</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add custom styles -->
+{% block styles %}
+<style>
+    .hover-shadow {
+        transition: all 0.3s ease;
+    }
+    
+    .hover-shadow:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        cursor: pointer;
+    }
+
+    .text-white-75 {
+        color: rgba(255, 255, 255, 0.75);
+    }
+
+    .text-white-50 {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+
+    .list-group-item:first-child {
+        border-top: none;
+    }
+
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+<!-- Add necessary scripts -->
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    // Make entire card clickable
+    document.querySelectorAll('.card.hover-shadow').forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.currentTarget.parentElement.tagName === 'A') {
+                e.currentTarget.parentElement.click();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

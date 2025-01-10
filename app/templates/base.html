@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Friendly Pharmacy{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom styles -->
+    <style>
+        /* Base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.5;
+            background-color: #f8f9fa;
+        }
+
+        /* Container width and spacing */
+        .container {
+            max-width: 1200px;
+            padding: 0 1.5rem;
+        }
+
+        /* Main content spacing */
+        .main-content {
+            padding: 2rem 0;
+        }
+
+        /* Page title styling */
+        .page-title {
+            font-size: 2rem;
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding: 1rem 0;
+        }
+
+        .page-subtitle {
+            color: #4a5568;
+            margin-bottom: 2rem;
+        }
+
+        /* Navbar styling */
+        .navbar {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            background-color: white;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .navbar-brand:hover {
+            color: #1a202c;
+            text-decoration: none;
+        }
+
+        .navbar-nav .nav-link {
+            padding: 0.5rem 1rem;
+            color: #4a5568;
+        }
+
+        .navbar-nav .nav-link.active {
+            color: #3182ce;
+            font-weight: 500;
+        }
+
+        .dropdown-menu {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem;
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: #ebf4ff;
+        }
+
+        /* Alert styling */
+        .alert {
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+        }
+
+        /* Button styling */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #3182ce;
+            border-color: #3182ce;
+        }
+
+        .btn-primary:hover {
+            background-color: #2c5282;
+            border-color: #2c5282;
+        }
+
+        /* Badge styling */
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+        }
+
+        .badge.owner {
+            background-color: #3182ce;
+            color: white;
+        }
+
+        /* Welcome section */
+        .welcome-section {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .welcome-section h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-section p {
+            font-size: 1.125rem;
+            color: #4a5568;
+            margin-bottom: 2rem;
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .action-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .action-button.primary {
+            background-color: #3182ce;
+            color: white;
+        }
+
+        .action-button.secondary {
+            background-color: #4fd1c5;
+            color: white;
+        }
+
+        .action-button.success {
+            background-color: #48bb78;
+            color: white;
+        }
+
+        .action-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                <i class="fas fa-store me-2"></i>Friendly Pharmacy
+            </a>
+            {% if current_user.is_authenticated %}
+            <!-- Authenticated User Navigation -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+                
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <!-- Your existing navigation items -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.index') }}">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+
+                    <!-- Products Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-box me-1"></i>Products
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.products') }}">View Products</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.add_product') }}">Add Product</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Orders Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-shopping-cart me-1"></i>Orders
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.daily_orders') }}">Daily Orders</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.monthly_orders') }}">Monthly Orders</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.customer_orders') }}">Customer Orders</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.create_order_list') }}">Create New Order</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.order_history') }}">Order History</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Sales Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-cash-register me-1"></i>Sales
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.record_daily_sales') }}">Record Daily Sales</a></li>
+                            {% if current_user.role == 'owner' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.list_sales') }}">View All Sales</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+
+                    <!-- Management Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Management
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.list_wholesalers') }}">Wholesalers</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- New Analytics Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-chart-line me-1"></i>Analytics
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.sales_analytics') }}">Sales Analytics</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.order_analytics') }}">Order Analytics</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <!-- User Menu -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>
+                            {{ current_user.username }}
+                            {% if current_user.role == 'owner' %}
+                                <span class="badge owner">Owner</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            {% else %}
+            <!-- Unauthenticated User Navigation -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+                
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050;">
+    </div>
+</body>
+</html>

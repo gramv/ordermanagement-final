@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Owner Dashboard</h3>
+        <span class="text-muted">{{ datetime.now().strftime('%B %d, %Y') }}</span>
+    </div>
+
+    <!-- Interactive Metric Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Today's Sales Card -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ url_for('main.list_sales', show_today=true) }}" class="text-decoration-none">
+                <div class="card bg-primary h-100 hover-shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Today's Sales</div>
+                                <div class="text-white h3 mb-0">${{ "%.2f"|format(total_sales) }}</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-dollar-sign fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Pending Orders Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="dropdown w-100">
+                <div class="card bg-warning h-100 hover-shadow" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Pending Orders</div>
+                                <div class="text-white h3 mb-0">{{ pending_orders }}</div>
+                                <div class="text-white-75 small">Daily / Monthly</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-shopping-cart fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('main.daily_orders') }}">Daily Orders</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('main.monthly_orders') }}">Monthly Orders</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Customer Orders Card -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ url_for('main.customer_orders') }}" class="text-decoration-none">
+                <div class="card bg-success h-100 hover-shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Customer Orders</div>
+                                <div class="text-white h3 mb-0">{{ customer_orders }}</div>
+                                <div class="text-white-75 small">Pending orders</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-users fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Discrepancies Card -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ url_for('main.list_sales', status='discrepancy') }}" class="text-decoration-none">
+                <div class="card bg-danger h-100 hover-shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="me-3">
+                                <div class="text-white-75 small">Discrepancies</div>
+                                <div class="text-white h3 mb-0">{{ recent_discrepancies|length }}</div>
+                                <div class="text-white-75 small">Requiring attention</div>
+                            </div>
+                            <div class="text-white-50">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('main.list_sales') }}" class="btn btn-primary">
+                    <i class="fas fa-chart-line me-2"></i>View Sales
+                </a>
+                <a href="{{ url_for('main.sales_analytics') }}" class="btn btn-info">
+                    <i class="fas fa-chart-bar me-2"></i>Sales Analytics
+                </a>
+                <a href="{{ url_for('main.order_analytics') }}" class="btn btn-info">
+                    <i class="fas fa-chart-pie me-2"></i>Order Analytics
+                </a>
+                <a href="{{ url_for('main.products') }}" class="btn btn-success">
+                    <i class="fas fa-box me-2"></i>Products
+                </a>
+                <a href="{{ url_for('main.list_wholesalers') }}" class="btn btn-secondary">
+                    <i class="fas fa-truck me-2"></i>Wholesalers
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row">
+        <!-- Recent Discrepancies -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Discrepancies</h5>
+                    <a href="{{ url_for('main.list_sales', status='discrepancy') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_discrepancies %}
+                        <div class="list-group list-group-flush">
+                            {% for disc in recent_discrepancies %}
+                                <a href="{{ url_for('main.view_sales', sales_id=disc.id) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="mb-1">{{ disc.date.strftime('%Y-%m-%d') }}</div>
+                                            <small class="text-muted">By {{ disc.employee.username }}</small>
+                                        </div>
+                                        <span class="text-danger fw-bold">${{ "%.2f"|format(disc.overall_discrepancy) }}</span>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No recent discrepancies found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Customer Orders -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Customer Orders</h5>
+                    <a href="{{ url_for('main.customer_orders') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_customer_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in recent_customer_orders %}
+                                <a href="{{ url_for('main.view_customer_order', order_id=order.id) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="mb-1">{{ order.customer_name }}</div>
+                                            <small class="text-muted">{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="badge bg-{{ 'success' if order.is_paid else 'warning' }}">
+                                                {{ 'Paid' if order.is_paid else 'Unpaid' }}
+                                            </div>
+                                            <div>${{ "%.2f"|format(order.total_amount) }}</div>
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No recent customer orders found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add custom styles -->
+{% block styles %}
+<style>
+    .hover-shadow {
+        transition: all 0.3s ease;
+    }
+    
+    .hover-shadow:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        cursor: pointer;
+    }
+
+    .text-white-75 {
+        color: rgba(255, 255, 255, 0.75);
+    }
+
+    .text-white-50 {
+        color: rgba(255, 255, 255, 0.5);
+    }
+</style>
+{% endblock %}
+
+<!-- Add necessary scripts -->
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    // Make entire card clickable
+    document.querySelectorAll('.card.hover-shadow').forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.currentTarget.parentElement.tagName === 'A') {
+                e.currentTarget.parentElement.click();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

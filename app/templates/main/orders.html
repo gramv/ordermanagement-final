@@ -1,0 +1,35 @@
+<!-- app/templates/main/orders.html -->
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Orders</h1>
+    <a href="{{ url_for('main.new_order') }}" class="btn btn-primary mb-3">Place New Order</a>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Total Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ order.status }}</td>
+                    <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                    <td>
+                        <a href="{{ url_for('main.order_detail', id=order.id) }}" class="btn btn-sm btn-info">View</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5">No orders found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

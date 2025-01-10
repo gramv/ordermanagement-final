@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Analytics Dashboard</h1>
+
+<form method="GET" class="mb-4">
+    <div class="row">
+        <div class="col-md-4">
+            <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-4">
+            <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary">Update Date Range</button>
+        </div>
+    </div>
+</form>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Total Sales</h5>
+                <p class="card-text">${{ "%.2f"|format(total_sales) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Average Order Value</h5>
+                <p class="card-text">${{ "%.2f"|format(avg_order_value) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Top Selling Products</h5>
+                <canvas id="topProductsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Sales by Wholesaler</h5>
+                <canvas id="salesByWholesalerChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Order Frequency</h5>
+                <canvas id="orderFrequencyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Top Products Chart
+    var topProductsCtx = document.getElementById('topProductsChart').getContext('2d');
+    new Chart(topProductsCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ top_products|map(attribute=0)|list|tojson }},
+            datasets: [{
+                label: 'Quantity Sold',
+                data: {{ top_products|map(attribute=1)|list|tojson }},
+                backgroundColor: 'rgba(75, 192, 192, 0.6)'
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Sales by Wholesaler Chart
+    var salesByWholesalerCtx = document.getElementById('salesByWholesalerChart').getContext('2d');
+    new Chart(salesByWholesalerCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ sales_by_wholesaler|map(attribute=0)|list|tojson }},
+            datasets: [{
+                data: {{ sales_by_wholesaler|map(attribute=1)|list|tojson }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)'
+                ]
+            }]
+        }
+    });
+
+    // Order Frequency Chart
+    var orderFrequencyCtx = document.getElementById('orderFrequencyChart').getContext('2d');
+    new Chart(orderFrequencyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ order_frequency|map(attribute=0)|list|tojson }},
+            datasets: [{
+                label: 'Number of Orders',
+                data: {{ order_frequency|map(attribute=1)|list|tojson }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

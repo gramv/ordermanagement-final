@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Edit Order Item</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.product_name.label }}
+            {{ form.product_name(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.quantity.label }}
+            {{ form.quantity(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.price.label }}
+            {{ form.price(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.status.label }}
+            {{ form.status(class="form-control") }}
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+    <a href="{{ url_for('main.view_customer_order', order_id=item.customer_order_id) }}" class="btn btn-secondary mt-3">Back to Order</a>
+{% endblock %}
