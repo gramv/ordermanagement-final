@@ -1,0 +1,224 @@
+<!-- app/templates/invoice/pricing.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">Set Product Prices</h1>
+
+        <!-- Pricing Method Selection -->
+        <div id="methodSelection" class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">Choose Pricing Method</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="selectMethod('manual')" 
+                        class="p-4 border rounded-lg hover:bg-gray-50 text-center">
+                    <h3 class="font-semibold mb-2">Manual Pricing</h3>
+                    <p class="text-sm text-gray-600">Set margins manually for each category</p>
+                </button>
+                <button onclick="selectMethod('ai')" 
+                        class="p-4 border rounded-lg hover:bg-gray-50 text-center">
+                    <h3 class="font-semibold mb-2">AI-Suggested Pricing</h3>
+                    <p class="text-sm text-gray-600">Get AI recommendations based on location</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Location Input (Initially Hidden) -->
+        <div id="locationInput" class="bg-white shadow rounded-lg p-6 mb-6 hidden">
+            <h2 class="text-lg font-semibold mb-4">Enter Store Location</h2>
+            <div class="space-y-4">
+                <input type="text" id="location" 
+                       placeholder="Enter city, state or area"
+                       class="w-full p-2 border rounded">
+                <button onclick="getAISuggestions()" 
+                        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                    Get Suggestions
+                </button>
+            </div>
+        </div>
+
+        <!-- Category Margins Form -->
+        <div id="marginForm" class="bg-white shadow rounded-lg p-6 mb-6 hidden">
+            <h2 class="text-lg font-semibold mb-4">Set Category Margins</h2>
+            <div class="space-y-4" id="categoryMargins">
+                <!-- Categories will be populated here -->
+            </div>
+            <button onclick="calculatePrices()" 
+                    class="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                Calculate Prices
+            </button>
+        </div>
+
+        <!-- Price Preview -->
+        <div id="pricePreview" class="bg-white shadow rounded-lg p-6 hidden">
+            <h2 class="text-lg font-semibold mb-4">Review Price Changes</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th class="py-2 px-4 bg-gray-50">Product</th>
+                            <th class="py-2 px-4 bg-gray-50">Old Price</th>
+                            <th class="py-2 px-4 bg-gray-50">New Price</th>
+                            <th class="py-2 px-4 bg-gray-50">Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="priceTable">
+                        <!-- Price data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex justify-end space-x-4">
+                <button onclick="adjustMargins()" 
+                        class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600">
+                    Adjust Margins
+                </button>
+                <button onclick="finalizePrices()" 
+                        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+                    Finalize Prices
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentMethod = null;
+var invoiceId = "{{ invoice_id }}";
+
+function selectMethod(method) {
+    currentMethod = method;
+    document.getElementById('methodSelection').classList.add('hidden');
+    
+    if (method === 'ai') {
+        document.getElementById('locationInput').classList.remove('hidden');
+    } else {
+        loadCategories();
+    }
+}
+
+async function getAISuggestions() {
+    const location = document.getElementById('location').value;
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/suggest-margins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ location })
+        });
+        
+        const data = await response.json();
+        populateCategoryMargins(data);
+        
+        document.getElementById('locationInput').classList.add('hidden');
+        document.getElementById('marginForm').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to get margin suggestions');
+    }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/categories`);
+        const data = await response.json();
+        populateCategoryMargins(data.categories);
+        
+        document.getElementById('marginForm').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load categories');
+    }
+}
+
+function populateCategoryMargins(categories) {
+    const container = document.getElementById('categoryMargins');
+    container.innerHTML = '';
+    
+    Object.entries(categories).forEach(([category, data]) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <label class="block text-sm font-medium mb-2">${category}</label>
+            <div class="flex items-center space-x-2">
+                <input type="number" step="0.1" min="0" max="100"
+                       value="${data.suggested_margin || data.current_margin}"
+                       class="w-24 p-2 border rounded"
+                       id="margin-${category}">
+                <span class="text-sm text-gray-500">%</span>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+async function calculatePrices() {
+    const margins = {};
+    document.querySelectorAll('#categoryMargins input').forEach(input => {
+        const category = input.id.replace('margin-', '');
+        margins[category] = parseFloat(input.value);
+    });
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/calculate-manual`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ margins })
+        });
+        
+        const data = await response.json();
+        displayPricePreview(data.price_updates);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to calculate prices');
+    }
+}
+
+function displayPricePreview(priceUpdates) {
+    const table = document.getElementById('priceTable');
+    table.innerHTML = '';
+    
+    priceUpdates.forEach(update => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="py-2 px-4 border-b">${update.product_name}</td>
+            <td class="py-2 px-4 border-b">$${update.old_selling_price.toFixed(2)}</td>
+            <td class="py-2 px-4 border-b">$${update.new_selling_price.toFixed(2)}</td>
+            <td class="py-2 px-4 border-b">${update.margin.toFixed(1)}%</td>
+        `;
+        table.appendChild(row);
+    });
+    
+    document.getElementById('marginForm').classList.add('hidden');
+    document.getElementById('pricePreview').classList.remove('hidden');
+}
+
+function adjustMargins() {
+    document.getElementById('marginForm').classList.remove('hidden');
+    document.getElementById('pricePreview').classList.add('hidden');
+}
+
+async function finalizePrices() {
+    if (!confirm('Are you sure you want to finalize these prices?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/finalize-prices`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            window.location.href = '/staff/price-updates';
+        } else {
+            throw new Error('Failed to finalize prices');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to finalize prices');
+    }
+}
+</script>
+{% endblock %}

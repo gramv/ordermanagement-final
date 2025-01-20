@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-6">Manual Pricing - Invoice #{{ invoice.id }}</h1>
+
+    <!-- Category Cards -->
+    {% for category, data in categories.items() %}
+    <div class="bg-white rounded-lg shadow-lg mb-4 p-6">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h2 class="text-xl font-semibold">{{ category }}</h2>
+                <p class="text-gray-600">{{ data.product_count }} products</p>
+            </div>
+            <div class="w-64">
+                <label class="block text-sm font-medium text-gray-700">Margin %</label>
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    <input type="number" 
+                           name="margin-{{ category }}" 
+                           class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                           placeholder="Enter margin percentage"
+                           min="0"
+                           max="100"
+                           step="0.1"
+                           onchange="updatePrices('{{ category }}')">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cost & Calculations -->
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <p class="text-gray-600">Total Cost</p>
+                <p class="text-xl font-bold">₹{{ data.total_cost }}</p>
+            </div>
+            <div>
+                <p class="text-gray-600">After Margin</p>
+                <p class="text-xl font-bold" id="total-{{ category }}">-</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Summary & Actions -->
+    <div class="bg-gray-50 fixed bottom-0 left-0 right-0 border-t p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex space-x-8">
+                <div>
+                    <span class="text-gray-600">Total Cost:</span>
+                    <span class="font-bold">₹{{ total_cost }}</span>
+                </div>
+                <div>
+                    <span class="text-gray-600">After Margins:</span>
+                    <span class="font-bold" id="grand-total">-</span>
+                </div>
+            </div>
+            <div class="flex space-x-4">
+                <button onclick="window.history.back()" 
+                        class="px-4 py-2 border rounded-md hover:bg-gray-50">
+                    Back
+                </button>
+                <button onclick="saveMargins()" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    Save & Continue
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const categoryData = {{ categories|tojson|safe }};
+
+function updatePrices(category) {
+    const marginInput = document.querySelector(`input[name="margin-${category}"]`);
+    const margin = parseFloat(marginInput.value) / 100;
+    const totalCost = parseFloat(categoryData[category].total_cost);
+    
+    const totalAfterMargin = totalCost * (1 + margin);
+    document.getElementById(`total-${category}`).textContent = 
+        `₹${totalAfterMargin.toFixed(2)}`;
+        
+    updateGrandTotal();
+}
+
+function updateGrandTotal() {
+    let grandTotal = 0;
+    Object.keys(categoryData).forEach(category => {
+        const marginInput = document.querySelector(`input[name="margin-${category}"]`);
+        const margin = parseFloat(marginInput.value) / 100 || 0;
+        const totalCost = parseFloat(categoryData[category].total_cost);
+        grandTotal += totalCost * (1 + margin);
+    });
+    
+    document.getElementById('grand-total').textContent = 
+        `₹${grandTotal.toFixed(2)}`;
+}
+
+function saveMargins() {
+    const margins = {};
+    Object.keys(categoryData).forEach(category => {
+        const marginInput = document.querySelector(`input[name="margin-${category}"]`);
+        margins[category] = parseFloat(marginInput.value);
+    });
+
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ margins })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = data.redirect;
+        } else {
+            alert('Error saving margins: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error saving margins: ' + error);
+    });
+}
+</script>
+{% endblock %}

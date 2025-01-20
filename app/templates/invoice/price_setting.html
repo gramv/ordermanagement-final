@@ -1,0 +1,225 @@
+<!-- app/templates/invoice/price_setting.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Step Indicator -->
+    <div class="max-w-4xl mx-auto mb-8">
+        <div class="flex justify-between">
+            <div class="text-center">
+                <div class="w-10 h-10 mx-auto bg-green-500 text-white rounded-full flex items-center justify-center">1</div>
+                <p class="mt-2 text-sm">Upload</p>
+            </div>
+            <div class="text-center">
+                <div class="w-10 h-10 mx-auto bg-blue-500 text-white rounded-full flex items-center justify-center">2</div>
+                <p class="mt-2 text-sm">Set Prices</p>
+            </div>
+            <div class="text-center">
+                <div class="w-10 h-10 mx-auto bg-gray-300 text-white rounded-full flex items-center justify-center">3</div>
+                <p class="mt-2 text-sm">Review</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Pricing Method Selection -->
+        <div id="methodSelection" class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="p-6 bg-gray-50 border-b">
+                <h1 class="text-2xl font-bold">Choose Pricing Method</h1>
+                <p class="mt-2 text-gray-600">Select how you want to set product prices</p>
+            </div>
+
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Manual Pricing Option -->
+                    <div class="border rounded-lg p-6 hover:border-blue-500 cursor-pointer transition-colors" 
+                         onclick="selectMethod('manual')" id="manual-option">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-medium">Manual Pricing</h3>
+                                <p class="mt-1 text-gray-600">Set margins for each category manually</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Pricing Option -->
+                    <div class="border rounded-lg p-6 hover:border-blue-500 cursor-pointer transition-colors"
+                         onclick="selectMethod('ai')" id="ai-option">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-medium">AI Suggestions</h3>
+                                <p class="mt-1 text-gray-600">Get AI-recommended margins based on location</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Input (Initially Hidden) -->
+        <div id="locationInput" class="hidden mt-6 bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="p-6">
+                <h2 class="text-lg font-medium mb-4">Enter Store Location</h2>
+                <div class="space-y-4">
+                    <input type="text" id="location" 
+                           placeholder="Enter city, state or area"
+                           class="w-full p-2 border rounded-lg">
+                    <button onclick="getAISuggestions()" 
+                            class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
+                        Get Suggestions
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Margin Settings (Initially Hidden) -->
+        <div id="marginSettings" class="hidden mt-6 bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="p-6 bg-gray-50 border-b">
+                <h2 class="text-lg font-medium">Set Category Margins</h2>
+                <p class="mt-1 text-gray-600">Adjust margins for each product category</p>
+            </div>
+            <div class="p-6">
+                <div id="categoryMargins" class="space-y-4">
+                    <!-- Category margins will be populated here -->
+                </div>
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button onclick="goBack()" 
+                            class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        Back
+                    </button>
+                    <button onclick="calculatePrices()" 
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        Calculate Prices
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var invoiceId = "{{ invoice_id }}";
+var currentMethod = null;
+
+function selectMethod(method) {
+    currentMethod = method;
+    
+    // Update UI
+    document.getElementById('methodSelection').classList.add('hidden');
+    if (method === 'ai') {
+        document.getElementById('locationInput').classList.remove('hidden');
+    } else {
+        loadCategories();
+    }
+}
+
+async function getAISuggestions() {
+    const location = document.getElementById('location').value;
+    if (!location) {
+        alert('Please enter a location');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/suggest-margins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ location })
+        });
+        
+        if (!response.ok) throw new Error('Failed to get suggestions');
+        
+        const data = await response.json();
+        document.getElementById('locationInput').classList.add('hidden');
+        populateCategoryMargins(data);
+        document.getElementById('marginSettings').classList.remove('hidden');
+    } catch (error) {
+        alert('Error getting suggestions: ' + error.message);
+    }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/categories`);
+        if (!response.ok) throw new Error('Failed to load categories');
+        
+        const data = await response.json();
+        populateCategoryMargins(data);
+        document.getElementById('marginSettings').classList.remove('hidden');
+    } catch (error) {
+        alert('Error loading categories: ' + error.message);
+    }
+}
+
+function populateCategoryMargins(data) {
+    const container = document.getElementById('categoryMargins');
+    container.innerHTML = '';
+    
+    Object.entries(data).forEach(([category, info]) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="block font-medium text-gray-700">${category}</label>
+                    <p class="text-sm text-gray-500">${info.items.length} products</p>
+                </div>
+                <div class="w-32">
+                    <div class="flex items-center space-x-2">
+                        <input type="number" 
+                               value="${info.suggested_margin || info.current_margin}"
+                               min="0" max="100" step="0.1"
+                               class="w-20 p-2 border rounded"
+                               id="margin-${category}">
+                        <span class="text-gray-500">%</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function goBack() {
+    document.getElementById('marginSettings').classList.add('hidden');
+    document.getElementById('locationInput').classList.add('hidden');
+    document.getElementById('methodSelection').classList.remove('hidden');
+}
+
+async function calculatePrices() {
+    const margins = {};
+    document.querySelectorAll('#categoryMargins input[type="number"]').forEach(input => {
+        const category = input.id.replace('margin-', '');
+        margins[category] = parseFloat(input.value);
+    });
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/calculate-prices`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ margins })
+        });
+        
+        if (!response.ok) throw new Error('Failed to calculate prices');
+        
+        // Redirect to review page
+        window.location.href = `/invoice/${invoiceId}/review`;
+    } catch (error) {
+        alert('Error calculating prices: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

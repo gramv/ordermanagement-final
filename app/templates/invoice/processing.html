@@ -1,0 +1,117 @@
+# Create a new processing.html with the correct route
+template_content = '''{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>Invoice Processing Status</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Invoice Details</h4>
+                    <table class="table">
+                        <tr>
+                            <th>Invoice ID:</th>
+                            <td>{{ invoice.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge {% if invoice.status == 'completed' %}bg-success
+                                                  {% elif invoice.status == 'failed' %}bg-danger
+                                                  {% elif invoice.status == 'processing' %}bg-info
+                                                  {% else %}bg-warning{% endif %}">
+                                    {{ invoice.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Upload Date:</th>
+                            <td>{{ invoice.upload_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        </tr>
+                        {% if invoice.error_message %}
+                        <tr>
+                            <th>Error:</th>
+                            <td class="text-danger">{{ invoice.error_message }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h4>Processed Items</h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in invoice.temp_products %}
+                                <tr>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.category }}</td>
+                                    <td>{{ product.quantity }}</td>
+                                    <td>${{ "%.2f"|format(product.cost_price) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status specific actions -->
+            <div class="mt-4">
+                {% if invoice.status == 'completed' %}
+                    <a href="{{ url_for('invoice.price_updates') }}" class="btn btn-primary">
+                        <i class="fas fa-tag"></i> View Price Updates
+                    </a>
+                {% elif invoice.status == 'failed' %}
+                    <form action="{{ url_for('invoice.retry_processing', invoice_id=invoice.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-redo"></i> Retry Processing
+                        </button>
+                    </form>
+                {% endif %}
+                
+                <a href="{{ url_for('invoice.upload_invoice') }}" class="btn btn-secondary">
+                    <i class="fas fa-upload"></i> Upload Another Invoice
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if invoice.status in ['uploaded', 'processing'] %}
+    {% block scripts %}
+    <script>
+        // Auto-refresh for processing status
+        function checkStatus() {
+            fetch('{{ url_for("invoice.get_status", invoice_id=invoice.id) }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'processed') {
+                        window.location.href = data.redirect;
+                    } else if (data.status !== '{{ invoice.status }}') {
+                        window.location.reload();
+                    }
+                });
+        }
+        
+        // Check status every 3 seconds
+        setInterval(checkStatus, 3000);
+    </script>
+    {% endblock %}
+{% endif %}
+{% endblock %}
+'''
+
+# Write the new template
+with open('/Users/gouthamvemula/Documents/odm_invoice_new/ordermanagement/app/templates/invoice/processing.html', 'w') as f:
+    f.write(template_content)

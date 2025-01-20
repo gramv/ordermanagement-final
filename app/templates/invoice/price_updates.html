@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Price Updates</h1>
+    <div class="row">
+        <div class="col">
+            {% if updates %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for update in updates %}
+                    <tr>
+                        <td>{{ update.name }}</td>
+                        <td>{{ update.category }}</td>
+                        <td>{{ update.status }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="completeTask({{ update.id }})">
+                                Mark Complete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-info">
+                No pending price updates at this time.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function completeTask(taskId) {
+    fetch(`/invoice/tasks/${taskId}/complete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Reload the page to show updated status
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update task status');
+    });
+}
+</script>
+{% endblock %} 

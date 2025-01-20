@@ -1,0 +1,104 @@
+{# app/templates/invoice/upload.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Upload Invoice</h1>
+    
+    <!-- Progress Modal -->
+    <div class="modal fade" id="progressModal" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div id="progressText">Processing invoice...</div>
+                    <div class="progress mt-3" style="height: 20px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="wholesaler" class="form-label">Wholesaler</label>
+            <select class="form-select" name="wholesaler_id" required>
+                <option value="">Select Wholesaler</option>
+                {% for wholesaler in wholesalers %}
+                <option value="{{ wholesaler.id }}">{{ wholesaler.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="invoice_date" class="form-label">Invoice Date</label>
+            <input type="date" class="form-control" name="invoice_date" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="file" class="form-label">Invoice File</label>
+            <input type="file" class="form-control" name="file" accept=".jpg,.jpeg,.png,.pdf" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Upload Invoice</button>
+    </form>
+</div>
+
+{% block scripts %}
+<script>
+document.getElementById('uploadForm').onsubmit = async function(e) {
+    e.preventDefault();
+    
+    // Show progress modal
+    const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
+    progressModal.show();
+    
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    try {
+        // Update progress
+        progressBar.style.width = '25%';
+        progressText.textContent = 'Uploading file...';
+        
+        const formData = new FormData(this);
+        const response = await fetch('/invoice/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        progressBar.style.width = '50%';
+        progressText.textContent = 'Processing with AI...';
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Processing complete!';
+            
+            // Wait a moment before redirecting
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 1000);
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+    } catch (error) {
+        progressText.textContent = `Error: ${error.message}`;
+        progressBar.classList.add('bg-danger');
+        
+        // Show error for a moment before closing modal
+        setTimeout(() => {
+            progressModal.hide();
+        }, 3000);
+    }
+};
+</script>
+{% endblock %}
+{% endblock %}

@@ -253,6 +253,15 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('main.list_wholesalers') }}">Wholesalers</a></li>
+                            {% if current_user.role == 'owner' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('invoice.upload_invoice') }}">
+                                <i class="fas fa-file-upload me-2"></i>Upload Invoice
+                            </a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('invoice.price_updates') }}">
+                                <i class="fas fa-tags me-2"></i>Price Updates
+                            </a></li>
                         </ul>
                     </li>
 

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-6">AI Pricing Suggestions - Invoice #{{ invoice.id }}</h1>
+
+    <!-- Location Input Section -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div class="max-w-xl">
+            <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Store Location</label>
+            <div class="flex space-x-4">
+                <input type="text" 
+                       id="location" 
+                       class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                       placeholder="Enter your store location (e.g., Mumbai, Maharashtra)">
+                <button onclick="getAISuggestions()"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Get Suggestions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden">
+        <div class="bg-white rounded-lg shadow-lg p-8 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Getting margin suggestions based on your location...</p>
+        </div>
+    </div>
+
+    <!-- Category Cards -->
+    <div id="categoryCards" class="space-y-4 mb-20">
+        {% for category, data in categories.items() %}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold">{{ category }}</h2>
+                    <p class="text-gray-600">{{ data.count }} products</p>
+                </div>
+                <div class="w-64">
+                    <label class="block text-sm font-medium text-gray-700">Suggested Margin %</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <input type="number" 
+                               name="margin-{{ category }}" 
+                               class="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                               placeholder="Waiting for suggestions..."
+                               readonly
+                               min="0"
+                               max="100"
+                               step="0.1"
+                               onchange="updatePrices('{{ category }}')">
+                        <div class="absolute inset-y-0 right-0 flex items-center">
+                            <button onclick="toggleEdit('{{ category }}')"
+                                    class="p-1 text-gray-400 hover:text-gray-600">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cost & Calculations -->
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="text-gray-600">Total Cost</p>
+                    <p class="text-xl font-bold">₹{{ "%.2f"|format(data.total_cost) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">After Margin</p>
+                    <p class="text-xl font-bold" id="total-{{ category }}">-</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Fixed Bottom Bar -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex space-x-8">
+                <div>
+                    <span class="text-gray-600">Total Cost:</span>
+                    <span class="font-bold">₹{{ "%.2f"|format(total_cost) }}</span>
+                </div>
+                <div>
+                    <span class="text-gray-600">After Margins:</span>
+                    <span class="font-bold" id="grand-total">-</span>
+                </div>
+            </div>
+            <div class="flex space-x-4">
+                <button onclick="window.history.back()" 
+                        class="px-4 py-2 border rounded-md hover:bg-gray-50">
+                    Back
+                </button>
+                <button onclick="saveMargins()" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    Save & Continue
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const categoryData = {{ categories|tojson|safe }};
+
+function getAISuggestions() {
+    const location = document.getElementById('location').value;
+    if (!location) {
+        alert('Please enter your store location');
+        return;
+    }
+
+    // Show loading state
+    document.getElementById('loadingState').classList.remove('hidden');
+    document.getElementById('categoryCards').classList.add('opacity-50', 'pointer-events-none');
+
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ location })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            Object.entries(data.margins).forEach(([category, margin]) => {
+                const input = document.querySelector(`input[name="margin-${category}"]`);
+                if (input) {
+                    input.value = margin;
+                    input.readOnly = true;
+                    updatePrices(category);
+                }
+            });
+        } else {
+            throw new Error(data.error || 'Failed to get suggestions');
+        }
+    })
+    .catch(error => {
+        alert('Error getting suggestions: ' + error.message);
+    })
+    .finally(() => {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('categoryCards').classList.remove('opacity-50', 'pointer-events-none');
+    });
+}
+
+function toggleEdit(category) {
+    const input = document.querySelector(`input[name="margin-${category}"]`);
+    input.readOnly = !input.readOnly;
+    if (!input.readOnly) {
+        input.focus();
+    }
+}
+
+function updatePrices(category) {
+    const marginInput = document.querySelector(`input[name="margin-${category}"]`);
+    const margin = parseFloat(marginInput.value) / 100;
+    const totalCost = parseFloat(categoryData[category].total_cost);
+    
+    const totalAfterMargin = totalCost * (1 + margin);
+    document.getElementById(`total-${category}`).textContent = 
+        `₹${totalAfterMargin.toFixed(2)}`;
+        
+    updateGrandTotal();
+}
+
+function updateGrandTotal() {
+    let grandTotal = 0;
+    Object.keys(categoryData).forEach(category => {
+        const marginInput = document.querySelector(`input[name="margin-${category}"]`);
+        const margin = parseFloat(marginInput.value) / 100 || 0;
+        const totalCost = parseFloat(categoryData[category].total_cost);
+        grandTotal += totalCost * (1 + margin);
+    });
+    
+    document.getElementById('grand-total').textContent = 
+        `₹${grandTotal.toFixed(2)}`;
+}
+
+function saveMargins() {
+    const margins = {};
+    Object.keys(categoryData).forEach(category => {
+        const marginInput = document.querySelector(`input[name="margin-${category}"]`);
+        margins[category] = parseFloat(marginInput.value);
+    });
+
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ margins })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = data.redirect;
+        } else {
+            alert('Error saving margins: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error saving margins: ' + error);
+    });
+}
+</script>
+{% endblock %}

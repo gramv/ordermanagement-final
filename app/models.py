@@ -1,4 +1,4 @@
-from app import db, login
+from app.extensions import db, login
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -6,6 +6,18 @@ from datetime import datetime
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+class PriceUpdate(db.Model):
+    __tablename__ = 'price_update'
+    id = db.Column(db.Integer, primary_key=True)
+    temp_product_id = db.Column(db.Integer, db.ForeignKey('temp_product.id'), nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Simplified price fields
+    old_price = db.Column(db.Float, nullable=False)
+    new_price = db.Column(db.Float, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
@@ -18,9 +30,14 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     
     # Relationships
-    price_updates = db.relationship('PriceUpdate', backref='updated_by', lazy=True)
-    invoices_processed = db.relationship('Invoice', backref='processed_by', lazy=True)
+    price_updates_made = db.relationship('PriceUpdate', 
+                                       back_populates='updated_by',
+                                       foreign_keys=[PriceUpdate.updated_by_id])
+    invoices_processed = None
     sales_records = db.relationship('DailySales', backref='employee', lazy=True)
+    processed_invoices = db.relationship('Invoice', 
+                                       foreign_keys='Invoice.processed_by_id',
+                                       back_populates='processor')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -55,9 +72,9 @@ class Wholesaler(db.Model):
     invoice_parsing_notes = db.Column(db.Text)  # Notes for AI about invoice structure
     
     # Relationships
-    products = db.relationship('Product', back_populates='wholesaler')
     order_lists = db.relationship('OrderList', back_populates='wholesaler')
-    invoices = db.relationship('Invoice', backref='wholesaler', lazy=True)
+    products = db.relationship('Product', back_populates='wholesaler')
+    invoices = db.relationship('Invoice', back_populates='wholesaler')
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -83,7 +100,8 @@ class Product(db.Model):
     
     # Categorization and relationships
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
-    wholesaler_id = db.Column(db.Integer, db.ForeignKey('wholesaler.id'), nullable=False)
+    wholesaler_id = db.Column(db.Integer, db.ForeignKey('wholesaler.id'))
+    wholesaler = db.relationship('Wholesaler', back_populates='products')
     
     # Product status
     available_in_store = db.Column(db.Boolean, default=True)
@@ -98,9 +116,7 @@ class Product(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    wholesaler = db.relationship('Wholesaler', back_populates='products')
     price_history = db.relationship('PriceHistory', backref='product', lazy=True)
-    price_updates = db.relationship('PriceUpdate', backref='product', lazy=True)
     order_items = db.relationship('OrderListItem', backref='product')
     customer_order_items = db.relationship('CustomerOrderItem', backref='product')
 
@@ -248,7 +264,7 @@ class Invoice(db.Model):
     __tablename__ = 'invoice'
     id = db.Column(db.Integer, primary_key=True)
     invoice_number = db.Column(db.String(100), unique=True)
-    wholesaler_id = db.Column(db.Integer, db.ForeignKey('wholesaler.id'), nullable=False)
+    wholesaler_id = db.Column(db.Integer, db.ForeignKey('wholesaler.id'))
     processed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # File details
@@ -257,7 +273,7 @@ class Invoice(db.Model):
     file_type = db.Column(db.String(50))  # PDF, image, etc.
     
     # Processing status
-    status = db.Column(db.String(50), default='uploaded')  
+    status = db.Column(db.String(50), default='uploaded')
     processing_notes = db.Column(db.Text)
     error_message = db.Column(db.Text)
     
@@ -268,13 +284,24 @@ class Invoice(db.Model):
     
     # Relationships
     items = db.relationship('InvoiceItem', backref='invoice', lazy=True)
-    price_updates = db.relationship('PriceUpdate', backref='invoice', lazy=True)
+    price_updates = db.relationship('PriceUpdate', 
+                                  back_populates='invoice',
+                                  cascade='all, delete-orphan')
+    wholesaler = db.relationship('Wholesaler', 
+                               back_populates='invoices')
+    processor = db.relationship('User', 
+                              foreign_keys=[processed_by_id],
+                              back_populates='processed_invoices')
+    temp_products = db.relationship('TempProduct', 
+                                  back_populates='invoice',
+                                  cascade='all, delete-orphan')
 
 class InvoiceItem(db.Model):
     __tablename__ = 'invoice_item'
     id = db.Column(db.Integer, primary_key=True)
     invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    temp_product_id = db.Column(db.Integer, db.ForeignKey('temp_product.id'))
     
     # Raw data from invoice
     raw_product_name = db.Column(db.String(200))
@@ -303,6 +330,13 @@ class InvoiceItem(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = db.Column(db.String(20), default='pending')
+    staff_processed = db.Column(db.Boolean, default=False)
+    price_status = db.Column(db.String(20), default='pending')
+
+    # Cloudinary fields
+    cloudinary_public_id = db.Column(db.String(255))
+    cloudinary_url = db.Column(db.String(512))
 
     def calculate_price_difference(self):
         """Calculate price difference and set status"""
@@ -323,48 +357,86 @@ class InvoiceItem(db.Model):
                 self.price_status = 'higher'
                 self.requires_approval = True
 
-class PriceUpdate(db.Model):
-    __tablename__ = 'price_update'
+class TempProduct(db.Model):
+    __tablename__ = 'temp_product'
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'))
-    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(100))
+    quantity = db.Column(db.Integer)
+    cost_price = db.Column(db.Float)
+    selling_price = db.Column(db.Float, nullable=True)
+    margin = db.Column(db.Float, nullable=True)
+    status = db.Column(db.String(20), default='pending')
     
-    # Price changes
-    old_cost_price = db.Column(db.Float)
-    new_cost_price = db.Column(db.Float)
-    old_selling_price = db.Column(db.Float)
-    new_selling_price = db.Column(db.Float)
-    old_margin = db.Column(db.Float)
-    new_margin = db.Column(db.Float)
-    
-    # Update status
-    status = db.Column(db.String(50), default='pending')  # pending, completed
-    price_tag_updated = db.Column(db.Boolean, default=False)
-    update_notes = db.Column(db.Text)
-    
-    # AI-related fields
-    is_ai_suggested = db.Column(db.Boolean, default=False)
-    ai_confidence = db.Column(db.Float)
-    ai_reasoning = db.Column(db.Text)
-    
-    # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    completed_at = db.Column(db.DateTime)
+    # Updated relationships
+    invoice = db.relationship('Invoice', back_populates='temp_products')
+    price_updates = db.relationship('PriceUpdate', 
+                                  back_populates='temp_product',
+                                  cascade='all, delete-orphan')
 
 class PriceHistory(db.Model):
     __tablename__ = 'price_history'
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    cost_price = db.Column(db.Float, nullable=False)
-    selling_price = db.Column(db.Float, nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
+    old_cost_price = db.Column(db.Float, nullable=False)
+    new_cost_price = db.Column(db.Float, nullable=False)
+    old_selling_price = db.Column(db.Float, nullable=False)
+    new_selling_price = db.Column(db.Float, nullable=False)
     margin = db.Column(db.Float, nullable=False)
-    
-    # Change tracking
-    change_type = db.Column(db.String(50))  # manual, invoice, ai_suggested
-    change_reason = db.Column(db.Text)
-    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'))
-    
-    # Timestamps
-    effective_date = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TempPriceHistory(db.Model):
+    __tablename__ = 'temp_price_history'
+    id = db.Column(db.Integer, primary_key=True)
+    temp_product_id = db.Column(db.Integer, db.ForeignKey('temp_product.id'))
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'))
+    cost_price = db.Column(db.Float, nullable=False)
+    margin = db.Column(db.Float, nullable=False)
+    selling_price = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    # Add relationships
+    temp_product = db.relationship('TempProduct',
+                                 backref=db.backref('price_history', lazy=True))
+    invoice = db.relationship('Invoice',
+                            backref=db.backref('temp_price_history', lazy=True))
+    updated_by = db.relationship('User', backref='price_updates')
+
+class StaffPriceTask(db.Model):
+    __tablename__ = 'staff_price_task'
+    id = db.Column(db.Integer, primary_key=True)
+    temp_product_id = db.Column(db.Integer, db.ForeignKey('temp_product.id'))
+    staff_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    status = db.Column(db.String(20), default='pending')
+    label_printed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    temp_product = db.relationship('TempProduct', backref='staff_tasks')
+    staff = db.relationship('User', backref='price_tasks')
+
+def to_dict(self):
+    """Convert PriceUpdate instance to dictionary"""
+    return {
+        'id': self.id,
+        'product_id': self.product_id,
+        'invoice_id': self.invoice_id,
+        'old_cost_price': self.old_cost_price,
+        'new_cost_price': self.new_cost_price,
+        'old_selling_price': self.old_selling_price,
+        'new_selling_price': self.new_selling_price,
+        'old_margin': self.old_margin,
+        'new_margin': self.new_margin,
+        'status': self.status,
+        'created_at': self.created_at.isoformat() if self.created_at else None,
+        'completed_at': self.completed_at.isoformat() if self.completed_at else None
+    }
+
+# Then add relationship references
+PriceUpdate.temp_product = db.relationship('TempProduct', back_populates='price_updates')
+PriceUpdate.invoice = db.relationship('Invoice', back_populates='price_updates')
+PriceUpdate.updated_by = db.relationship('User', back_populates='price_updates_made')

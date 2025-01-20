@@ -1,0 +1,43 @@
+# config.py
+import os
+from urllib.parse import quote_plus
+from dotenv import load_dotenv
+import cloudinary
+from cloudinary import uploader
+
+# Set up base directory and load environment variables
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
+
+class Config(object):
+    # Application Configuration
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
+    FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
+    
+    # Database Configuration - Update only this part
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {
+            "sslmode": "require",
+            "application_name": "ordermanagement"
+        }
+    }
+    
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # File Upload
+    UPLOAD_FOLDER = os.path.join(basedir, 'uploads')
+    
+    # Cloudinary Configuration
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
+
+    # Initialize Cloudinary only if credentials are available
+    if all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
+        cloudinary.config(
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+            secure=True
+        )

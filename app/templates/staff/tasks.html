@@ -1,0 +1,220 @@
+{# app/templates/staff/tasks.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4>Price Update Tasks</h4>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Search Products</label>
+                            <input type="text" class="form-control" id="searchInput"
+                                   placeholder="Enter product name...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Category Filter</label>
+                            <select class="form-select" id="categoryFilter">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category[0] }}">{{ category[0] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" onclick="applyFilters()">
+                                Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress Summary -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Progress</h5>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: {{ (completed_count / total_count * 100) if total_count > 0 else 0 }}%">
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="h3">{{ completed_count }}</div>
+                            <div class="text-muted">Completed</div>
+                        </div>
+                        <div class="col">
+                            <div class="h3">{{ pending_count }}</div>
+                            <div class="text-muted">Pending</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Old Price</th>
+                                    <th>New Price</th>
+                                    <th>Change</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr id="task-{{ task.id }}">
+                                    <td>{{ task.temp_product.name }}</td>
+                                    <td>{{ task.temp_product.category }}</td>
+                                    <td>₹{{ "%.2f"|format(task.old_selling_price) }}</td>
+                                    <td>₹{{ "%.2f"|format(task.new_selling_price) }}</td>
+                                    <td>
+                                        {% set change = ((task.new_selling_price - task.old_selling_price) / task.old_selling_price * 100) %}
+                                        <span class="badge rounded-pill {{ 'bg-success' if change < 0 else 'bg-danger' }}">
+                                            {{ "%.1f"|format(change) }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2"
+                                                onclick="printLabel({{ task.id }})">
+                                            <i class="fas fa-print"></i> Print
+                                        </button>
+                                        <button class="btn btn-sm btn-success"
+                                                onclick="completeTask({{ task.id }})">
+                                            <i class="fas fa-check"></i> Complete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Preview Modal -->
+<div class="modal fade" id="printModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Print Price Label</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="labelPreview" class="text-center p-4">
+                    <!-- Label content will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printLabelContent()">
+                    Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Filter tasks
+function applyFilters() {
+    const search = document.getElementById('searchInput').value;
+    const category = document.getElementById('categoryFilter').value;
+    
+    window.location.href = `/staff/tasks?search=${search}&category=${category}`;
+}
+
+// Print label
+async function printLabel(taskId) {
+    try {
+        const response = await fetch(`/staff/tasks/${taskId}`);
+        const task = await response.json();
+        
+        // Create label content
+        const labelContent = `
+            <div class="border p-3">
+                <h6>${task.product_name}</h6>
+                <div class="h4">₹${task.new_price.toFixed(2)}</div>
+                <small class="text-muted">${task.category}</small>
+            </div>
+        `;
+        
+        document.getElementById('labelPreview').innerHTML = labelContent;
+        new bootstrap.Modal(document.getElementById('printModal')).show();
+    } catch (error) {
+        alert('Error loading label data');
+    }
+}
+
+// Print label content
+function printLabelContent() {
+    const content = document.getElementById('labelPreview').innerHTML;
+    const printWindow = window.open('', '', 'height=400,width=800');
+    printWindow.document.write('<html><head><title>Price Label</title>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(content);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// Complete task
+async function completeTask(taskId) {
+    if (!confirm('Mark this price update as completed?')) return;
+    
+    try {
+        const response = await fetch(`/staff/tasks/${taskId}/complete`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            // Remove task row
+            document.getElementById(`task-${taskId}`).remove();
+            // Update progress
+            updateProgress();
+        } else {
+            throw new Error('Failed to complete task');
+        }
+    } catch (error) {
+        alert('Error completing task: ' + error.message);
+    }
+}
+
+// Update progress counters
+function updateProgress() {
+    const total = document.querySelectorAll('tbody tr').length;
+    const completed = total - document.querySelectorAll('tbody tr:not(.completed)').length;
+    const percentage = (completed / total * 100) || 0;
+    
+    document.querySelector('.progress-bar').style.width = `${percentage}%`;
+    document.querySelector('.completed-count').textContent = completed;
+    document.querySelector('.pending-count').textContent = total - completed;
+}
+</script>
+{% endblock %}

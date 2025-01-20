@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-4">
+            <h3 class="text-sm font-medium text-gray-500">Total Products</h3>
+            <p class="mt-1 text-2xl font-semibold">{{ total_products }}</p>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-4">
+            <h3 class="text-sm font-medium text-gray-500">Categories</h3>
+            <p class="mt-1 text-2xl font-semibold">{{ categories|length }}</p>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-4">
+            <h3 class="text-sm font-medium text-gray-500">Total Cost</h3>
+            <p class="mt-1 text-2xl font-semibold">₹{{ "%.2f"|format(total_cost) }}</p>
+        </div>
+    </div>
+
+    <!-- Method Selection -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="{{ url_for('invoice.manual_pricing', invoice_id=invoice.id) }}" 
+           class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0">
+                    <svg class="w-6 h-6 text-blue-500" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium">Manual Pricing</h3>
+                    <p class="mt-2 text-sm text-gray-500">Set your own margins for each category</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('invoice.ai_pricing', invoice_id=invoice.id) }}"
+           class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0">
+                    <svg class="w-6 h-6 text-blue-500" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M12,16A3,3 0 0,1 9,13C9,11.88 9.61,10.9 10.5,10.39L20.21,4.77L14.68,14.35C14.18,15.33 13.17,16 12,16M12,3C13.81,3 15.5,3.44 17,4.25V4.25L12,7.88L7,4.25C8.5,3.44 10.19,3 12,3M3.28,4L2,5.27L8.73,12L8,12C6.14,12 4.59,13.28 4.14,15L2,15V17H4.14C4.59,18.72 6.14,20 8,20H12C13.86,20 15.41,18.72 15.86,17H18V15H15.86C15.41,13.28 13.86,12 12,12L10.73,12L16.73,6L18,7.27V4H3.28Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium">AI Suggestions</h3>
+                    <p class="mt-2 text-sm text-gray-500">Get location-based margin recommendations</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

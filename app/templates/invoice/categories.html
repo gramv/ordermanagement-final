@@ -1,0 +1,226 @@
+{# app/templates/invoice/categories.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Set Product Margins</h4>
+            
+            <!-- Pricing Method Selection -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="pricingMethod" 
+                                       id="manualPricing" value="manual" checked>
+                                <label class="form-check-label" for="manualPricing">
+                                    Manual Pricing
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="pricingMethod" 
+                                       id="aiPricing" value="ai">
+                                <label class="form-check-label" for="aiPricing">
+                                    AI Suggested Pricing
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Location input (hidden by default) -->
+                        <div class="col-md-6 d-none" id="locationInput">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="location" 
+                                       placeholder="Enter store location">
+                                <button class="btn btn-primary" type="button" onclick="getAiSuggestions()">
+                                    Get Suggestions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="row">
+        <div class="col-12">
+            <div class="accordion" id="categoryAccordion">
+                {% for category, data in categories.items() %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#category{{ loop.index }}">
+                            <div class="d-flex justify-content-between w-100 me-3">
+                                <span>{{ category }}</span>
+                                <div class="margin-input-container">
+                                    <div class="input-group" style="width: 150px;">
+                                        <input type="number" class="form-control margin-input" 
+                                               data-category="{{ category }}"
+                                               value="30" min="0" max="100" step="0.1">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    
+                    <div id="category{{ loop.index }}" class="accordion-collapse collapse" 
+                         data-bs-parent="#categoryAccordion">
+                        <div class="accordion-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Quantity</th>
+                                            <th>Cost Price</th>
+                                            <th>Calculated Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for product in data.products %}
+                                        <tr>
+                                            <td>{{ product.name }}</td>
+                                            <td>{{ product.quantity }}</td>
+                                            <td>₹{{ "%.2f"|format(product.cost_price) }}</td>
+                                            <td class="calculated-price" 
+                                                data-cost="{{ product.cost_price }}">
+                                                -
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12 text-end">
+            <button type="button" class="btn btn-secondary me-2" onclick="history.back()">
+                Back
+            </button>
+            <button type="button" class="btn btn-primary" onclick="calculatePrices()">
+                Calculate & Save
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Handle pricing method toggle
+document.querySelectorAll('input[name="pricingMethod"]').forEach(input => {
+    input.addEventListener('change', function() {
+        const locationInput = document.getElementById('locationInput');
+        if (this.value === 'ai') {
+            locationInput.classList.remove('d-none');
+        } else {
+            locationInput.classList.add('d-none');
+        }
+    });
+});
+
+// Calculate prices based on margin
+function updateCalculatedPrices(category) {
+    const marginInput = document.querySelector(`input[data-category="${category}"]`);
+    const margin = parseFloat(marginInput.value) / 100;
+    
+    document.querySelectorAll(`#category${category} .calculated-price`).forEach(cell => {
+        const costPrice = parseFloat(cell.dataset.cost);
+        const sellingPrice = costPrice * (1 + margin);
+        cell.textContent = `₹${sellingPrice.toFixed(2)}`;
+    });
+}
+
+// Get AI suggestions
+async function getAiSuggestions() {
+    const location = document.getElementById('location').value;
+    if (!location) {
+        alert('Please enter store location');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/suggest-margins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ location })
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            // Update margin inputs with suggestions
+            Object.entries(result.margins).forEach(([category, margin]) => {
+                const input = document.querySelector(`input[data-category="${category}"]`);
+                if (input) {
+                    input.value = margin;
+                    updateCalculatedPrices(category);
+                }
+            });
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        alert('Error getting suggestions: ' + error.message);
+    }
+}
+
+// Calculate and save all prices
+async function calculatePrices() {
+    const margins = {};
+    document.querySelectorAll('.margin-input').forEach(input => {
+        margins[input.dataset.category] = parseFloat(input.value);
+    });
+    
+    try {
+        const response = await fetch(`/invoice/${invoiceId}/set-margins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: document.querySelector('input[name="pricingMethod"]:checked').value,
+                margins,
+                location: document.getElementById('location').value
+            })
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            window.location.href = `/invoice/${invoiceId}/review`;
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        alert('Error saving prices: ' + error.message);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    // Set up margin input listeners
+    document.querySelectorAll('.margin-input').forEach(input => {
+        input.addEventListener('input', () => {
+            updateCalculatedPrices(input.dataset.category);
+        });
+        // Initial calculation
+        updateCalculatedPrices(input.dataset.category);
+    });
+});
+</script>
+{% endblock %}

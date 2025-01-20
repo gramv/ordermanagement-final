@@ -1,0 +1,206 @@
+<!-- app/templates/staff/price_updates.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Price Updates</h1>
+            <div class="text-right">
+                <div class="mb-2">Progress: <span id="progressText">0/0</span></div>
+                <div class="w-48 h-2 bg-gray-200 rounded">
+                    <div id="progressBar" class="h-2 bg-green-500 rounded-l" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-6">
+            <div class="relative">
+                <input type="text" 
+                       id="searchInput" 
+                       placeholder="Search products..." 
+                       class="w-full p-3 pl-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="absolute left-3 top-3 text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="mb-6">
+            <select id="categoryFilter" class="w-full p-2 border rounded-lg">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Product List -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="p-4 border-b">
+                <h2 class="text-lg font-semibold">Products to Update</h2>
+            </div>
+            
+            <div id="productList" class="divide-y">
+                <!-- Products will be loaded here -->
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="hidden p-4 text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            </div>
+
+            <!-- No Results Message -->
+            <div id="noResults" class="hidden p-8 text-center text-gray-500">
+                No products found matching your search.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Card Template -->
+<template id="productTemplate">
+    <div class="product-card p-4 hover:bg-gray-50">
+        <div class="flex items-center justify-between">
+            <div class="flex-1">
+                <h3 class="text-lg font-medium product-name"></h3>
+                <div class="mt-1 text-sm text-gray-500 product-category"></div>
+                <div class="mt-2 grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-sm text-gray-500">Old Price</div>
+                        <div class="text-lg font-semibold old-price"></div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500">New Price</div>
+                        <div class="text-lg font-semibold text-green-600 new-price"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="ml-4">
+                <button class="mark-done-btn px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Mark Updated
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+let products = [];
+let filteredProducts = [];
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadProducts();
+    setupEventListeners();
+});
+
+// Set up event listeners
+function setupEventListeners() {
+    document.getElementById('searchInput').addEventListener('input', filterProducts);
+    document.getElementById('categoryFilter').addEventListener('change', filterProducts);
+}
+
+// Load products from server
+async function loadProducts() {
+    showLoading(true);
+    try {
+        const response = await fetch('/api/products/pending-updates');
+        products = await response.json();
+        filteredProducts = [...products];
+        updateProductList();
+        updateProgress();
+    } catch (error) {
+        console.error('Error loading products:', error);
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Filter products based on search and category
+function filterProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const categoryId = document.getElementById('categoryFilter').value;
+
+    filteredProducts = products.filter(product => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm);
+        const matchesCategory = !categoryId || product.category_id === parseInt(categoryId);
+        return matchesSearch && matchesCategory;
+    });
+
+    updateProductList();
+}
+
+// Update the product list display
+function updateProductList() {
+    const container = document.getElementById('productList');
+    const template = document.getElementById('productTemplate');
+    container.innerHTML = '';
+
+    if (filteredProducts.length === 0) {
+        document.getElementById('noResults').classList.remove('hidden');
+        return;
+    }
+
+    document.getElementById('noResults').classList.add('hidden');
+    
+    filteredProducts.forEach(product => {
+        const card = template.content.cloneNode(true);
+        
+        card.querySelector('.product-name').textContent = product.name;
+        card.querySelector('.product-category').textContent = product.category_name;
+        card.querySelector('.old-price').textContent = `$${product.old_price.toFixed(2)}`;
+        card.querySelector('.new-price').textContent = `$${product.new_price.toFixed(2)}`;
+
+        const button = card.querySelector('.mark-done-btn');
+        button.onclick = () => markProductUpdated(product.id);
+        if (product.updated) {
+            button.disabled = true;
+            button.textContent = 'Updated';
+        }
+
+        container.appendChild(card);
+    });
+}
+
+// Mark a product as updated
+async function markProductUpdated(productId) {
+    try {
+        const response = await fetch(`/api/products/${productId}/mark-updated`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            // Update local data
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                product.updated = true;
+                updateProductList();
+                updateProgress();
+            }
+        }
+    } catch (error) {
+        console.error('Error marking product as updated:', error);
+    }
+}
+
+// Update progress indicators
+function updateProgress() {
+    const total = products.length;
+    const completed = products.filter(p => p.updated).length;
+    const percentage = (completed / total) * 100;
+
+    document.getElementById('progressText').textContent = `${completed}/${total}`;
+    document.getElementById('progressBar').style.width = `${percentage}%`;
+}
+
+// Show/hide loading indicator
+function showLoading(show) {
+    document.getElementById('loadingIndicator').classList.toggle('hidden', !show);
+}
+</script>
+{% endblock %}
