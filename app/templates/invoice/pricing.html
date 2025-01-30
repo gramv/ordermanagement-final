@@ -1,224 +1,383 @@
 <!-- app/templates/invoice/pricing.html -->
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+.category-card {
+    transition: all 0.3s ease;
+}
+.category-card:hover {
+    transform: translateY(-2px);
+}
+.margin-input:focus {
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-6">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold mb-6">Set Product Prices</h1>
-
-        <!-- Pricing Method Selection -->
-        <div id="methodSelection" class="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">Choose Pricing Method</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="selectMethod('manual')" 
-                        class="p-4 border rounded-lg hover:bg-gray-50 text-center">
-                    <h3 class="font-semibold mb-2">Manual Pricing</h3>
-                    <p class="text-sm text-gray-600">Set margins manually for each category</p>
-                </button>
-                <button onclick="selectMethod('ai')" 
-                        class="p-4 border rounded-lg hover:bg-gray-50 text-center">
-                    <h3 class="font-semibold mb-2">AI-Suggested Pricing</h3>
-                    <p class="text-sm text-gray-600">Get AI recommendations based on location</p>
-                </button>
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">{{ 'AI-Assisted' if mode == 'ai' else 'Manual' }} Price Setting</h1>
+                <p class="text-gray-600">Invoice #{{ invoice.invoice_number }}</p>
             </div>
-        </div>
-
-        <!-- AI Location Input (Initially Hidden) -->
-        <div id="locationInput" class="bg-white shadow rounded-lg p-6 mb-6 hidden">
-            <h2 class="text-lg font-semibold mb-4">Enter Store Location</h2>
-            <div class="space-y-4">
-                <input type="text" id="location" 
-                       placeholder="Enter city, state or area"
-                       class="w-full p-2 border rounded">
-                <button onclick="getAISuggestions()" 
-                        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-                    Get Suggestions
-                </button>
-            </div>
-        </div>
-
-        <!-- Category Margins Form -->
-        <div id="marginForm" class="bg-white shadow rounded-lg p-6 mb-6 hidden">
-            <h2 class="text-lg font-semibold mb-4">Set Category Margins</h2>
-            <div class="space-y-4" id="categoryMargins">
-                <!-- Categories will be populated here -->
-            </div>
-            <button onclick="calculatePrices()" 
-                    class="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-                Calculate Prices
-            </button>
-        </div>
-
-        <!-- Price Preview -->
-        <div id="pricePreview" class="bg-white shadow rounded-lg p-6 hidden">
-            <h2 class="text-lg font-semibold mb-4">Review Price Changes</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr>
-                            <th class="py-2 px-4 bg-gray-50">Product</th>
-                            <th class="py-2 px-4 bg-gray-50">Old Price</th>
-                            <th class="py-2 px-4 bg-gray-50">New Price</th>
-                            <th class="py-2 px-4 bg-gray-50">Margin</th>
-                        </tr>
-                    </thead>
-                    <tbody id="priceTable">
-                        <!-- Price data will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-4 flex justify-end space-x-4">
-                <button onclick="adjustMargins()" 
-                        class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600">
-                    Adjust Margins
-                </button>
-                <button onclick="finalizePrices()" 
-                        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
-                    Finalize Prices
-                </button>
+            <div class="text-sm text-gray-600">
+                <p>Date: {{ invoice.invoice_date.strftime('%Y-%m-%d') }}</p>
+                <p>Supplier: {{ invoice.wholesaler.name }}</p>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-var currentMethod = null;
-var invoiceId = "{{ invoice_id }}";
-
-function selectMethod(method) {
-    currentMethod = method;
-    document.getElementById('methodSelection').classList.add('hidden');
-    
-    if (method === 'ai') {
-        document.getElementById('locationInput').classList.remove('hidden');
-    } else {
-        loadCategories();
-    }
-}
-
-async function getAISuggestions() {
-    const location = document.getElementById('location').value;
-    
-    try {
-        const response = await fetch(`/invoice/${invoiceId}/suggest-margins`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ location })
-        });
-        
-        const data = await response.json();
-        populateCategoryMargins(data);
-        
-        document.getElementById('locationInput').classList.add('hidden');
-        document.getElementById('marginForm').classList.remove('hidden');
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to get margin suggestions');
-    }
-}
-
-async function loadCategories() {
-    try {
-        const response = await fetch(`/invoice/${invoiceId}/categories`);
-        const data = await response.json();
-        populateCategoryMargins(data.categories);
-        
-        document.getElementById('marginForm').classList.remove('hidden');
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to load categories');
-    }
-}
-
-function populateCategoryMargins(categories) {
-    const container = document.getElementById('categoryMargins');
-    container.innerHTML = '';
-    
-    Object.entries(categories).forEach(([category, data]) => {
-        const div = document.createElement('div');
-        div.innerHTML = `
-            <label class="block text-sm font-medium mb-2">${category}</label>
-            <div class="flex items-center space-x-2">
-                <input type="number" step="0.1" min="0" max="100"
-                       value="${data.suggested_margin || data.current_margin}"
-                       class="w-24 p-2 border rounded"
-                       id="margin-${category}">
-                <span class="text-sm text-gray-500">%</span>
+    {% if mode == 'ai' %}
+    <!-- Location Input (Only for AI mode) -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6" id="locationSection">
+        <h2 class="text-lg font-semibold mb-4">Store Location</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <input type="text" id="location" 
+                       class="w-full p-2 border rounded-md"
+                       placeholder="Enter store location">
             </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Area Type</label>
+                <select id="areaType" class="w-full p-2 border rounded-md">
+                    <option value="">Select area type</option>
+                    <option value="urban">Urban</option>
+                    <option value="suburban">Suburban</option>
+                    <option value="rural">Rural</option>
+                    <option value="mall">Shopping Mall</option>
+                    <option value="commercial">Commercial District</option>
+                </select>
+            </div>
+        </div>
+        <button id="getAISuggestions" 
+                class="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors">
+            Get AI Suggestions
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Category Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="categoriesGrid">
+        {% for category_name, category_data in categories.items() %}
+        <div class="category-card bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-6">
+                <!-- Category Header -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">{{ category_name }}</h3>
+                    <span class="text-sm bg-gray-100 px-2 py-1 rounded">
+                        {{ category_data.product_count }} items
+                    </span>
+                </div>
+
+                <!-- Category Stats -->
+                <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+                    <div>
+                        <p class="text-gray-600">Total Cost</p>
+                        <p class="font-semibold">${{ "%.2f"|format(category_data.total_cost) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Avg Cost/Item</p>
+                        <p class="font-semibold">${{ "%.2f"|format(category_data.total_cost / category_data.product_count) }}</p>
+                    </div>
+                </div>
+
+                <!-- Margin Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Margin Percentage
+                        {% if category_data.avg_margin %}
+                        <span class="text-sm text-gray-500">(Avg: {{ "%.1f"|format(category_data.avg_margin) }}%)</span>
+                        {% endif %}
+                    </label>
+                    <div class="flex items-center">
+                        <input type="number" 
+                               class="margin-input w-full p-2 border rounded-md"
+                               data-category="{{ category_name }}"
+                               value="{{ category_data.avg_margin if category_data.avg_margin else 30 }}"
+                               min="0" max="100" step="0.1">
+                        <span class="ml-2">%</span>
+                    </div>
+                </div>
+
+                <!-- Calculations Result -->
+                <div class="bg-gray-50 rounded-md p-4 mt-4">
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Revenue:</span>
+                            <span class="calculation-revenue font-semibold">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Profit:</span>
+                            <span class="calculation-profit font-semibold">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Avg Price:</span>
+                            <span class="calculation-avg-price font-semibold">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Summary Card -->
+    <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold mb-4">Overall Summary</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <p class="text-gray-600">Total Cost</p>
+                <p class="text-2xl font-semibold" id="summaryTotalCost">
+                    ${{ "%.2f"|format(total_cost) }}
+                </p>
+            </div>
+            <div>
+                <p class="text-gray-600">Expected Revenue</p>
+                <p class="text-2xl font-semibold" id="summaryRevenue">$0.00</p>
+            </div>
+            <div>
+                <p class="text-gray-600">Total Profit</p>
+                <p class="text-2xl font-semibold" id="summaryProfit">$0.00</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-8 flex justify-end space-x-4">
+        <a href="{{ url_for('pricing.pricing_method', invoice_id=invoice.id) }}" 
+           class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+            Back
+        </a>
+        <button id="saveButton" 
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+            Save and Continue
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mode = '{{ mode }}';
+    const invoiceId = {{ invoice.id }};
+    
+    // Initialize tooltips and other UI elements
+    initializeUI();
+    
+    // Set up event listeners for margin inputs
+    setupMarginInputs();
+    
+    if (mode === 'ai') {
+        setupAISuggestions();
+    }
+    
+    // Initial calculations
+    calculateAllCategories();
+    
+    // Setup save functionality
+    setupSaveButton();
+});
+
+function initializeUI() {
+    // Show loading spinner
+    const showLoading = (element) => {
+        const originalContent = element.innerHTML;
+        element.setAttribute('data-original-content', originalContent);
+        element.innerHTML = `
+            <svg class="animate-spin h-5 w-5 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
         `;
-        container.appendChild(div);
+        element.disabled = true;
+    };
+
+    // Hide loading spinner
+    const hideLoading = (element) => {
+        const originalContent = element.getAttribute('data-original-content');
+        element.innerHTML = originalContent;
+        element.disabled = false;
+    };
+
+    window.showLoading = showLoading;
+    window.hideLoading = hideLoading;
+}
+
+function setupMarginInputs() {
+    const marginInputs = document.querySelectorAll('.margin-input');
+    marginInputs.forEach(input => {
+        input.addEventListener('input', debounce(async function() {
+            const category = this.dataset.category;
+            await calculateCategoryPrices(category, this.value);
+            updateSummary();
+        }, 300));
     });
 }
 
-async function calculatePrices() {
-    const margins = {};
-    document.querySelectorAll('#categoryMargins input').forEach(input => {
-        const category = input.id.replace('margin-', '');
-        margins[category] = parseFloat(input.value);
-    });
-    
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+async function calculateAllCategories() {
+    const promises = Array.from(document.querySelectorAll('.margin-input')).map(input => 
+        calculateCategoryPrices(input.dataset.category, input.value)
+    );
+    await Promise.all(promises);
+    updateSummary();
+}
+
+async function calculateCategoryPrices(category, margin) {
     try {
-        const response = await fetch(`/invoice/${invoiceId}/calculate-manual`, {
+        const response = await fetch(`/api/invoice/${invoiceId}/calculate-prices`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ margins })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category, margin: parseFloat(margin) })
         });
         
         const data = await response.json();
-        displayPricePreview(data.price_updates);
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to calculate prices');
-    }
-}
-
-function displayPricePreview(priceUpdates) {
-    const table = document.getElementById('priceTable');
-    table.innerHTML = '';
-    
-    priceUpdates.forEach(update => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="py-2 px-4 border-b">${update.product_name}</td>
-            <td class="py-2 px-4 border-b">$${update.old_selling_price.toFixed(2)}</td>
-            <td class="py-2 px-4 border-b">$${update.new_selling_price.toFixed(2)}</td>
-            <td class="py-2 px-4 border-b">${update.margin.toFixed(1)}%</td>
-        `;
-        table.appendChild(row);
-    });
-    
-    document.getElementById('marginForm').classList.add('hidden');
-    document.getElementById('pricePreview').classList.remove('hidden');
-}
-
-function adjustMargins() {
-    document.getElementById('marginForm').classList.remove('hidden');
-    document.getElementById('pricePreview').classList.add('hidden');
-}
-
-async function finalizePrices() {
-    if (!confirm('Are you sure you want to finalize these prices?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/invoice/${invoiceId}/finalize-prices`, {
-            method: 'POST'
-        });
-        
-        if (response.ok) {
-            window.location.href = '/staff/price-updates';
-        } else {
-            throw new Error('Failed to finalize prices');
+        if (data.status === 'success') {
+            updateCategoryDisplay(category, data.calculations);
+            return data.calculations;
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to finalize prices');
+        console.error('Error calculating prices:', error);
+        showError('Failed to calculate prices. Please try again.');
     }
+}
+
+function updateCategoryDisplay(category, calculations) {
+    const card = document.querySelector(`[data-category="${category}"]`).closest('.category-card');
+    if (!card) return;
+
+    card.querySelector('.calculation-revenue').textContent = 
+        `$${calculations.total_revenue.toFixed(2)}`;
+    card.querySelector('.calculation-profit').textContent = 
+        `$${calculations.profit.toFixed(2)}`;
+    card.querySelector('.calculation-avg-price').textContent = 
+        `$${calculations.avg_selling_price.toFixed(2)}`;
+}
+
+function setupAISuggestions() {
+    const suggestButton = document.getElementById('getAISuggestions');
+    if (!suggestButton) return;
+
+    suggestButton.addEventListener('click', async () => {
+        const location = document.getElementById('location').value;
+        const areaType = document.getElementById('areaType').value;
+        
+        if (!location || !areaType) {
+            showError('Please enter both location and area type');
+            return;
+        }
+        
+        try {
+            showLoading(suggestButton);
+            const response = await fetch(`/api/invoice/${invoiceId}/suggest-margins`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location, areaType })
+            });
+            
+            const data = await response.json();
+            if (data.status === 'success') {
+                applyAISuggestions(data.margins);
+                updateSummaryFromData(data.summary);
+            }
+        } catch (error) {
+            console.error('Error getting AI suggestions:', error);
+            showError('Failed to get AI suggestions. Please try again.');
+        } finally {
+            hideLoading(suggestButton);
+        }
+    });
+}
+
+function applyAISuggestions(margins) {
+    Object.entries(margins).forEach(([category, margin]) => {
+        const input = document.querySelector(`[data-category="${category}"]`);
+        if (input) {
+            input.value = margin;
+            calculateCategoryPrices(category, margin);
+        }
+    });
+}
+
+function updateSummaryFromData(summary) {
+    document.getElementById('summaryTotalCost').textContent = 
+        `$${summary.total_cost.toFixed(2)}`;
+    document.getElementById('summaryRevenue').textContent = 
+        `$${summary.expected_revenue.toFixed(2)}`;
+    document.getElementById('summaryProfit').textContent = 
+        `$${(summary.expected_revenue - summary.total_cost).toFixed(2)}`;
+}
+
+function updateSummary() {
+    let totalCost = parseFloat(document.getElementById('summaryTotalCost').textContent.replace('$', ''));
+    let totalRevenue = 0;
+    let totalProfit = 0;
+    
+    document.querySelectorAll('.category-card').forEach(card => {
+        const revenue = parseFloat(card.querySelector('.calculation-revenue').textContent.replace('$', '')) || 0;
+        const profit = parseFloat(card.querySelector('.calculation-profit').textContent.replace('$', '')) || 0;
+        
+        totalRevenue += revenue;
+        totalProfit += profit;
+    });
+    
+    document.getElementById('summaryRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
+    document.getElementById('summaryProfit').textContent = `$${totalProfit.toFixed(2)}`;
+}
+
+function setupSaveButton() {
+    const saveButton = document.getElementById('saveButton');
+    if (!saveButton) return;
+
+    saveButton.addEventListener('click', async () => {
+        try {
+            showLoading(saveButton);
+            const margins = {};
+            document.querySelectorAll('.margin-input').forEach(input => {
+                margins[input.dataset.category] = parseFloat(input.value);
+            });
+            
+            const response = await fetch(`/api/invoice/${invoiceId}/save-prices`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ margins })
+            });
+            
+            const data = await response.json();
+            if (data.status === 'success' && data.redirect) {
+                window.location.href = data.redirect;
+            }
+        } catch (error) {
+            console.error('Error saving prices:', error);
+            showError('Failed to save prices. Please try again.');
+        } finally {
+            hideLoading(saveButton);
+        }
+    });
+}
+
+function showError(message) {
+    // You can implement your preferred error notification method here
+    alert(message);
 }
 </script>
 {% endblock %}

@@ -2,15 +2,24 @@
 from flask import Flask
 from config import Config
 from app.extensions import db, migrate, login
+from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Block socket.io requests
+    @app.route('/socket.io/<path:path>', methods=['GET', 'POST'])
+    def block_socketio(path):
+        return 'Socket.IO requests are not supported', 404
+
     # Initialize Flask extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+    csrf.init_app(app)
 
     # Register blueprints
     from app.auth import bp as auth_bp

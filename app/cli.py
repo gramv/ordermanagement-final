@@ -38,6 +38,35 @@ def add_categories_command():
         db.session.rollback()
         click.echo(f'Error adding categories: {str(e)}', err=True)
 
+@click.command('init-categories')
+@with_appcontext
+def init_categories():
+    """Initialize standard product categories"""
+    categories = [
+        ('Hair Care Products', 0.35),
+        ('Skin Care', 0.40),
+        ('Men\'s Grooming', 0.35),
+        ('Dental Care', 0.30),
+        ('Personal Care', 0.35),
+        ('Hair Colors & Dyes', 0.40),
+        ('Deodorants & Perfumes', 0.45),
+        ('First Aid', 0.25),
+        ('Cleaning Tools', 0.30),
+        ('Bathroom Cleaners', 0.30),
+        ('Feminine Care', 0.35),
+        ('Baby Care', 0.30),
+        ('Health Supplements', 0.40),
+        ('Cosmetics', 0.45)
+    ]
+    
+    for name, margin in categories:
+        if not Category.query.filter_by(name=name).first():
+            category = Category(name=name, default_margin=margin)
+            db.session.add(category)
+    
+    db.session.commit()
+    print("Categories initialized successfully")
+
 def init_app(app):
     app.cli.add_command(add_categories_command)
-        
+    app.cli.add_command(init_categories)

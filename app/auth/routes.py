@@ -15,7 +15,11 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
-            return redirect(url_for('main.index'))
+            # Get next page or default to index
+            next_page = request.args.get('next')
+            if not next_page or urlparse(next_page).netloc != '':
+                next_page = url_for('main.index')
+            return redirect(next_page)
         flash('Invalid username or password')
     return render_template('auth/login.html', form=form)
 

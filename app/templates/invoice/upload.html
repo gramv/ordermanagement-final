@@ -1,104 +1,129 @@
-{# app/templates/invoice/upload.html #}
 {% extends "base.html" %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai_loader.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h1>Upload Invoice</h1>
-    
-    <!-- Progress Modal -->
-    <div class="modal fade" id="progressModal" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-body text-center">
-                    <div class="mb-3">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                    <div id="progressText">Processing invoice...</div>
-                    <div class="progress mt-3" style="height: 20px;">
-                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="upload-container fade-in">
+    <div class="upload-header">
+        <i class="fas fa-upload"></i>
+        <h2>Upload Invoice</h2>
     </div>
 
     <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        {{ form.csrf_token }}
+        
         <div class="mb-3">
-            <label for="wholesaler" class="form-label">Wholesaler</label>
-            <select class="form-select" name="wholesaler_id" required>
-                <option value="">Select Wholesaler</option>
-                {% for wholesaler in wholesalers %}
-                <option value="{{ wholesaler.id }}">{{ wholesaler.name }}</option>
-                {% endfor %}
-            </select>
+            {{ form.wholesaler_id.label(class="form-label") }}
+            {{ form.wholesaler_id(class="form-select") }}
+            {% if form.wholesaler_id.errors %}
+                <div class="text-danger">
+                    {% for error in form.wholesaler_id.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="mb-3">
-            <label for="invoice_date" class="form-label">Invoice Date</label>
-            <input type="date" class="form-control" name="invoice_date" required>
+            {{ form.invoice_date.label(class="form-label") }}
+            {{ form.invoice_date(class="form-control", type="date") }}
+            {% if form.invoice_date.errors %}
+                <div class="text-danger">
+                    {% for error in form.invoice_date.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="mb-3">
-            <label for="file" class="form-label">Invoice File</label>
-            <input type="file" class="form-control" name="file" accept=".jpg,.jpeg,.png,.pdf" required>
+            {{ form.file.label(class="form-label") }}
+            {{ form.file(class="form-control", accept=".jpg,.jpeg,.png,.pdf") }}
+            {% if form.file.errors %}
+                <div class="text-danger">
+                    {% for error in form.file.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-primary">Upload Invoice</button>
+        <div class="mb-3">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
     </form>
+    <div id="progress-container" class="mt-4" style="display: none;">
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar" role="progressbar" 
+                 style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        <p id="progress-text" class="mt-2">Processing...</p>
+    </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/ai_loader.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-document.getElementById('uploadForm').onsubmit = async function(e) {
-    e.preventDefault();
-    
-    // Show progress modal
-    const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
-    progressModal.show();
-    
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    
-    try {
-        // Update progress
-        progressBar.style.width = '25%';
-        progressText.textContent = 'Uploading file...';
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        const formData = new FormData(this);
-        const response = await fetch('/invoice/upload', {
-            method: 'POST',
-            body: formData
-        });
+        const formData = new FormData(form);
         
-        progressBar.style.width = '50%';
-        progressText.textContent = 'Processing with AI...';
-        
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-            progressBar.style.width = '100%';
-            progressText.textContent = 'Processing complete!';
+        try {
+            const response = await fetch('/invoice/upload', {
+                method: 'POST',
+                body: formData
+            });
             
-            // Wait a moment before redirecting
-            setTimeout(() => {
-                window.location.href = data.redirect;
-            }, 1000);
-        } else {
-            throw new Error(data.error || 'Upload failed');
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Redirect immediately to the summary page
+                window.location.href = data.redirect_url;
+            } else {
+                // Handle validation errors
+                if (data.errors) {
+                    let errorMessage = '<ul>';
+                    for (const [field, fieldErrors] of Object.entries(data.errors)) {
+                        errorMessage += `<li>${field}: ${fieldErrors.join(', ')}</li>`;
+                    }
+                    errorMessage += '</ul>';
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Form Validation Failed',
+                        html: errorMessage
+                    });
+                } else {
+                    // Handle other errors
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Upload Failed',
+                        text: data.message || 'An unexpected error occurred',
+                        footer: data.details ? `Details: ${data.details}` : ''
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Failed',
+                text: 'An unexpected error occurred during upload',
+                footer: error.message
+            });
         }
-    } catch (error) {
-        progressText.textContent = `Error: ${error.message}`;
-        progressBar.classList.add('bg-danger');
-        
-        // Show error for a moment before closing modal
-        setTimeout(() => {
-            progressModal.hide();
-        }, 3000);
-    }
-};
+    });
+});
 </script>
-{% endblock %}
 {% endblock %}

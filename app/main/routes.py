@@ -29,32 +29,29 @@ from io import BytesIO  # Add this
 import pandas as pd
 
 from flask import (
-    render_template, flash, redirect, url_for, request, 
-    jsonify, current_app, send_file  # Add send_file here
+    render_template, 
+    redirect, 
+    url_for, 
+    flash, 
+    request, 
+    current_app, 
+    jsonify
 )
 from flask_login import login_required, current_user
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
+from sqlalchemy import func, desc
 
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import or_, desc, func
-from sqlalchemy.orm import joinedload
-
-from werkzeug.utils import secure_filename
-
-from wtforms import StringField, FloatField, SelectField, SubmitField
-from wtforms.validators import DataRequired, NumberRange
-
-from app import db
 from app.main import bp
-from app.main.forms import (
-    ProductForm, WholesalerForm, OrderListForm,
-    BulkUploadForm, CustomerOrderForm, CustomerOrderItemForm
-)
-from app.forms import DailySalesForm
+from app.extensions import db
 from app.models import (
-    User, Product, Wholesaler, OrderList, OrderListItem,
-    CustomerOrder, CustomerOrderItem, DailySales, SalesDocument,
+    User, 
+    Product, 
+    Wholesaler, 
+    OrderList, 
+    OrderListItem, 
+    CustomerOrder, 
+    CustomerOrderItem, 
+    DailySales, 
+    SalesDocument,
     Category
 )
 from app.utils.storage import CloudinaryStorage
@@ -64,13 +61,27 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from app.main.forms import (ProductForm, WholesalerForm, OrderListForm,
-                            BulkUploadForm, CustomerOrderForm, CustomerOrderItemForm)
+from app.main.forms import (
+    ProductForm, 
+    WholesalerForm, 
+    OrderListForm,
+    BulkUploadForm, 
+    CustomerOrderForm, 
+    CustomerOrderItemForm
+)
 from app.forms import DailySalesForm
-
-from app.models import (User, Product, Wholesaler, OrderList, OrderListItem,
-                        CustomerOrder, CustomerOrderItem, DailySales, SalesDocument,
-                        Category)
+from app.models import (
+    User, 
+    Product, 
+    Wholesaler, 
+    OrderList, 
+    OrderListItem, 
+    CustomerOrder, 
+    CustomerOrderItem, 
+    DailySales, 
+    SalesDocument,
+    Category
+)
 
 from app.utils.storage import CloudinaryStorage
 from flask import render_template
@@ -93,8 +104,15 @@ import logging
 import os
 import pandas as pd
 from app.models import (
-    User, Product, Wholesaler, OrderList, OrderListItem, 
-    CustomerOrder, CustomerOrderItem, DailySales, SalesDocument
+    User, 
+    Product, 
+    Wholesaler, 
+    OrderList, 
+    OrderListItem, 
+    CustomerOrder, 
+    CustomerOrderItem, 
+    DailySales, 
+    SalesDocument
 )
 from app.utils.storage import CloudinaryStorage
 from app.utils.analytics import (

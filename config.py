@@ -4,15 +4,25 @@ from urllib.parse import quote_plus
 from dotenv import load_dotenv
 import cloudinary
 from cloudinary import uploader
+import re
 
 # Set up base directory and load environment variables
 basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, '.env'))
+load_dotenv()
 
 class Config(object):
     # Application Configuration
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
+    
+    # OpenAI API Configuration
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    
+    # Claude API Configuration
+    CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
+    
+    # DeepSeek API Configuration
+    DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
     
     # Database Configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', (
@@ -39,19 +49,25 @@ class Config(object):
     ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
     
     # Cloudinary Configuration
-    if os.environ.get('CLOUDINARY_URL'):
-        cloudinary.config(secure=True)  # Will use CLOUDINARY_URL from env
-    else:
-        # Fallback to individual credentials
-        CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
-        CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
-        CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
-        
-        if all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
+    CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
+    CLOUDINARY_CLOUD_NAME = None
+    CLOUDINARY_API_KEY = None
+    CLOUDINARY_API_SECRET = None
+    
+    if CLOUDINARY_URL:
+        # Parse cloudinary URL (format: cloudinary://<api_key>:<api_secret>@<cloud_name>)
+        match = re.match(r'cloudinary://(\d+):([^@]+)@(.+)', CLOUDINARY_URL)
+        if match:
+            api_key, api_secret, cloud_name = match.groups()
+            CLOUDINARY_CLOUD_NAME = cloud_name
+            CLOUDINARY_API_KEY = api_key
+            CLOUDINARY_API_SECRET = api_secret
+            
+            # Configure cloudinary
             cloudinary.config(
-                cloud_name=CLOUDINARY_CLOUD_NAME,
-                api_key=CLOUDINARY_API_KEY,
-                api_secret=CLOUDINARY_API_SECRET,
+                cloud_name=cloud_name,
+                api_key=api_key,
+                api_secret=api_secret,
                 secure=True
             )
     
@@ -59,9 +75,6 @@ class Config(object):
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
     SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
     SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET')
-    
-    # Claude AI Configuration
-    CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
     
     # Email Configuration (if needed)
     MAIL_SERVER = os.environ.get('MAIL_SERVER')

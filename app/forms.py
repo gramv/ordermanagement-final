@@ -1,10 +1,12 @@
 from flask_wtf import FlaskForm
 from wtforms import (StringField, PasswordField, BooleanField, SubmitField, 
-                    TextAreaField, FloatField, DateTimeField)
-from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, NumberRange
-from flask_wtf.file import FileField, FileAllowed
+                    TextAreaField, FloatField, DateTimeField, DateField, 
+                    SelectField, FileField)
+from wtforms.validators import (DataRequired, Email, EqualTo, ValidationError, 
+                                NumberRange)
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from app.models import User
-from datetime import datetime  # Add this import
+from datetime import datetime  
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -68,3 +70,21 @@ class DailySalesForm(FlaskForm):
     
     notes = TextAreaField('Notes')
     submit = SubmitField('Submit Sales Report')
+
+class UploadForm(FlaskForm):
+    """Form for uploading invoices with additional metadata"""
+    file = FileField('Invoice File', validators=[
+        FileRequired(message='Please select a file to upload.'),
+        FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 
+                    message='Only image and PDF files are allowed.')
+    ])
+    wholesaler_id = SelectField('Wholesaler', 
+        coerce=int, 
+        validators=[DataRequired(message='Please select a wholesaler.')],
+        choices=[]  # Will be populated dynamically in the route
+    )
+    invoice_date = DateField('Invoice Date', 
+        validators=[DataRequired(message='Please provide the invoice date.')],
+        format='%Y-%m-%d'
+    )
+    submit = SubmitField('Upload Invoice')

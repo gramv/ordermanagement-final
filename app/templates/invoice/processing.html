@@ -1,117 +1,308 @@
-# Create a new processing.html with the correct route
-template_content = '''{% extends "base.html" %}
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+.processing-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.progress-section {
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.progress-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1rem;
+}
+
+.progress-ring circle {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+.stage-indicator {
+    margin: 2rem 0;
+    padding: 1rem;
+    border-radius: 8px;
+    background: #f3f4f6;
+}
+
+.stage-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.stage-item.active {
+    background: #e0e7ff;
+}
+
+.stage-item.completed {
+    background: #dcfce7;
+}
+
+.stage-item i {
+    width: 24px;
+    text-align: center;
+}
+
+.stage-item.completed i {
+    color: #059669;
+}
+
+.stage-item.active i {
+    color: #4f46e5;
+}
+
+.pricing-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.pricing-option {
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pricing-option:hover {
+    border-color: #4f46e5;
+    background: #f5f3ff;
+}
+
+.pricing-option i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #4f46e5;
+}
+
+.pricing-option h3 {
+    margin: 0.5rem 0;
+    font-size: 1.25rem;
+    color: #1f2937;
+}
+
+.pricing-option p {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.error-state {
+    text-align: center;
+    padding: 2rem;
+}
+
+.error-state i {
+    font-size: 3rem;
+    color: #dc2626;
+    margin-bottom: 1rem;
+}
+
+.error-message {
+    color: #dc2626;
+    margin-bottom: 1rem;
+}
+
+.retry-button {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.retry-button:hover {
+    background: #b91c1c;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header">
-            <h2>Invoice Processing Status</h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h4>Invoice Details</h4>
-                    <table class="table">
-                        <tr>
-                            <th>Invoice ID:</th>
-                            <td>{{ invoice.id }}</td>
-                        </tr>
-                        <tr>
-                            <th>Status:</th>
-                            <td>
-                                <span class="badge {% if invoice.status == 'completed' %}bg-success
-                                                  {% elif invoice.status == 'failed' %}bg-danger
-                                                  {% elif invoice.status == 'processing' %}bg-info
-                                                  {% else %}bg-warning{% endif %}">
-                                    {{ invoice.status }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Upload Date:</th>
-                            <td>{{ invoice.upload_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                        </tr>
-                        {% if invoice.error_message %}
-                        <tr>
-                            <th>Error:</th>
-                            <td class="text-danger">{{ invoice.error_message }}</td>
-                        </tr>
-                        {% endif %}
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h4>Processed Items</h4>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Category</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for product in invoice.temp_products %}
-                                <tr>
-                                    <td>{{ product.name }}</td>
-                                    <td>{{ product.category }}</td>
-                                    <td>{{ product.quantity }}</td>
-                                    <td>${{ "%.2f"|format(product.cost_price) }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+<div class="processing-container fade-in">
+    <div class="upload-header">
+        <i class="fas fa-cogs"></i>
+        <h2>Processing Invoice</h2>
+    </div>
 
-            <!-- Status specific actions -->
-            <div class="mt-4">
-                {% if invoice.status == 'completed' %}
-                    <a href="{{ url_for('invoice.price_updates') }}" class="btn btn-primary">
-                        <i class="fas fa-tag"></i> View Price Updates
-                    </a>
-                {% elif invoice.status == 'failed' %}
-                    <form action="{{ url_for('invoice.retry_processing', invoice_id=invoice.id) }}" method="POST" class="d-inline">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-redo"></i> Retry Processing
-                        </button>
-                    </form>
-                {% endif %}
-                
-                <a href="{{ url_for('invoice.upload_invoice') }}" class="btn btn-secondary">
-                    <i class="fas fa-upload"></i> Upload Another Invoice
-                </a>
+    <!-- Progress Section -->
+    <div class="progress-section" id="progressSection">
+        <svg class="progress-ring" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+            <circle id="progressRing" cx="60" cy="60" r="54" fill="none" stroke="#4f46e5" stroke-width="8"
+                    stroke-dasharray="339.292" stroke-dashoffset="339.292"/>
+        </svg>
+        <h3 id="progressText">0%</h3>
+        <p id="statusMessage">Starting process...</p>
+    </div>
+
+    <!-- Processing Stages -->
+    <div class="stage-indicator">
+        <div class="stage-item" id="uploadStage">
+            <i class="fas fa-upload"></i>
+            <span>Upload Complete</span>
+        </div>
+        <div class="stage-item" id="extractStage">
+            <i class="fas fa-file-alt"></i>
+            <span>Extracting Data</span>
+        </div>
+        <div class="stage-item" id="categoryStage">
+            <i class="fas fa-tags"></i>
+            <span>Matching Categories</span>
+        </div>
+        <div class="stage-item" id="analysisStage">
+            <i class="fas fa-chart-line"></i>
+            <span>Analyzing Prices</span>
+        </div>
+    </div>
+
+    <!-- Error State (Hidden by default) -->
+    <div class="error-state" id="errorState" style="display: none;">
+        <i class="fas fa-exclamation-circle"></i>
+        <h3>Processing Failed</h3>
+        <p class="error-message" id="errorMessage"></p>
+        <button class="retry-button" id="retryButton">
+            <i class="fas fa-redo"></i>
+            Retry Processing
+        </button>
+    </div>
+
+    <!-- Success State (Hidden by default) -->
+    <div id="successState" style="display: none;">
+        <div class="pricing-options">
+            <div class="pricing-option" id="aiPricingOption">
+                <i class="fas fa-robot"></i>
+                <h3>AI-Assisted Pricing</h3>
+                <p>Get smart pricing suggestions based on market data and location</p>
+            </div>
+            <div class="pricing-option" id="manualPricingOption">
+                <i class="fas fa-sliders-h"></i>
+                <h3>Manual Pricing</h3>
+                <p>Set your own margins and prices for each category</p>
             </div>
         </div>
     </div>
 </div>
-
-{% if invoice.status in ['uploaded', 'processing'] %}
-    {% block scripts %}
-    <script>
-        // Auto-refresh for processing status
-        function checkStatus() {
-            fetch('{{ url_for("invoice.get_status", invoice_id=invoice.id) }}')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'processed') {
-                        window.location.href = data.redirect;
-                    } else if (data.status !== '{{ invoice.status }}') {
-                        window.location.reload();
-                    }
-                });
-        }
-        
-        // Check status every 3 seconds
-        setInterval(checkStatus, 3000);
-    </script>
-    {% endblock %}
-{% endif %}
 {% endblock %}
-'''
 
-# Write the new template
-with open('/Users/gouthamvemula/Documents/odm_invoice_new/ordermanagement/app/templates/invoice/processing.html', 'w') as f:
-    f.write(template_content)
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/socket.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const invoiceId = '{{ invoice.id }}';
+    const progressRing = document.getElementById('progressRing');
+    const progressText = document.getElementById('progressText');
+    const statusMessage = document.getElementById('statusMessage');
+    const stages = ['uploadStage', 'extractStage', 'categoryStage', 'analysisStage'];
+    let currentStage = 0;
+
+    // Calculate progress ring circumference
+    const radius = progressRing.r.baseVal.value;
+    const circumference = radius * 2 * Math.PI;
+    progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+
+    function setProgress(percent) {
+        const offset = circumference - (percent / 100 * circumference);
+        progressRing.style.strokeDashoffset = offset;
+        progressText.textContent = `${Math.round(percent)}%`;
+    }
+
+    function updateStage(stage, status) {
+        const stageElement = document.getElementById(stage);
+        if (status === 'active') {
+            stageElement.classList.add('active');
+            stageElement.classList.remove('completed');
+        } else if (status === 'completed') {
+            stageElement.classList.remove('active');
+            stageElement.classList.add('completed');
+        }
+    }
+
+    // Socket event listeners
+    window.addEventListener('invoice-progress', function(event) {
+        const data = event.detail;
+        setProgress(data.progress);
+        statusMessage.textContent = data.message;
+        
+        // Update stages
+        if (data.stage && stages.includes(data.stage)) {
+            const stageIndex = stages.indexOf(data.stage);
+            // Complete previous stages
+            for (let i = 0; i < stageIndex; i++) {
+                updateStage(stages[i], 'completed');
+            }
+            // Set current stage as active
+            updateStage(data.stage, 'active');
+            currentStage = stageIndex;
+        }
+    });
+
+    window.addEventListener('invoice-complete', function(event) {
+        // Complete all stages
+        stages.forEach(stage => updateStage(stage, 'completed'));
+        setProgress(100);
+        
+        // Show pricing options
+        document.getElementById('progressSection').style.display = 'none';
+        document.getElementById('successState').style.display = 'block';
+        
+        // Setup pricing option clicks
+        document.getElementById('aiPricingOption').onclick = () => {
+            window.location.href = `/invoices/${invoiceId}/pricing/ai`;
+        };
+        document.getElementById('manualPricingOption').onclick = () => {
+            window.location.href = `/invoices/${invoiceId}/pricing/manual`;
+        };
+    });
+
+    window.addEventListener('invoice-error', function(event) {
+        const data = event.detail;
+        document.getElementById('progressSection').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('errorMessage').textContent = data.message;
+    });
+
+    // Join invoice room for updates
+    window.socketService.joinInvoiceRoom(invoiceId);
+
+    // Retry button handler
+    document.getElementById('retryButton').onclick = async function() {
+        try {
+            const response = await fetch(`/api/invoices/${invoiceId}/retry`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                document.getElementById('errorMessage').textContent = data.message || 'Retry failed';
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent = 'Failed to retry processing';
+        }
+    };
+});
+</script>
+{% endblock %}
